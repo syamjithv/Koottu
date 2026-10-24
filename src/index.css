@@ -12,3 +12,50 @@
 @media(max-width:900px){.landing-hero{grid-template-columns:1fr;padding-top:55px}.plan-canvas{height:460px}.story-intro{grid-template-columns:1fr;gap:25px}.adapt-story{grid-template-columns:1fr;padding:45px}.workspace-nav{grid-template-columns:1fr 1fr}.workspace-nav nav{display:none}.celebration-hero{grid-template-columns:1fr}.celebration-state{border-left:0;padding:0}.workspace-pair{grid-template-columns:1fr}.map-section{padding-right:0}.matters-panel{margin:0 0 80px}.budget-legend{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:620px){.public-nav,.setup-nav,.workspace-nav{padding:0 17px;height:68px}.nav-cta{font-size:0}.nav-cta span{font-size:17px}.landing-hero{padding:48px 17px 65px}.landing-copy h1{font-size:60px}.landing-copy p{font-size:14px}.hero-ctas{display:grid}.plan-canvas{height:390px;padding:20px;box-shadow:8px 8px 0 var(--saffron)}.canvas-budget strong{font-size:38px}.note-two{display:none}.story{padding:75px 17px}.story-intro h2{font-size:43px}.story-steps{grid-template-columns:1fr;margin-top:50px}.story-steps article,.story-steps article+article{padding:25px 0;border-left:0;border-bottom:1px solid var(--line)}.adapt-story{margin:0 17px 75px;padding:30px 22px}.adapt-story h2{font-size:36px}.before-after{margin-top:25px}.public-footer{padding:35px 17px;display:grid;gap:25px}.public-footer button{text-align:left;font-size:19px}.setup-main{padding:45px 17px 30px}.step-label{right:17px;top:45px}.setup-step h1{font-size:52px}.occasion-grid,.form-grid,.priority-grid{grid-template-columns:1fr}.choice{min-height:70px}.budget-input{grid-column:auto}.setup-actions{position:sticky;bottom:0;background:var(--paper);padding-bottom:10px}.workspace-main{padding:0 17px}.celebration-hero{padding-top:50px;gap:25px}.celebration-title h1{font-size:57px}.celebration-facts{grid-template-columns:1fr 1fr}.celebration-facts>div+div{padding-left:12px}.celebration-facts>div:nth-child(3){border-left:0}.workspace-section{padding:75px 0}.section-heading{display:block;margin-bottom:35px}.section-heading h2{font-size:40px}.prototype-label,.timeline-risk{display:inline-block;margin-top:18px}.budget-numbers{grid-template-columns:1fr;gap:15px}.budget-numbers div+div{border-left:0;padding-left:0}.segment-bar{height:38px}.budget-detail{grid-template-columns:1fr;gap:15px}.budget-legend{grid-template-columns:1fr 1fr}.map-canvas{height:430px}.map-pin{max-width:170px}.pin-main{left:5%}.pin-note{right:5%}.matters-panel{padding:45px 25px}.journey article{grid-template-columns:48px 1fr;gap:13px}.journey-point{width:48px;height:48px}.journey:before{left:23px}.task-status{grid-column:2;justify-self:start}.workspace-cta{margin:70px 0;padding:60px 20px}.workspace-cta h2{font-size:42px}.workspace-footer{padding:35px 17px;display:grid;gap:25px}.workspace-footer p{text-align:left}.drawer{padding:25px 18px}.drawer-head h2{font-size:34px}.controls{grid-template-columns:1fr}.controls label:first-child,.reset-link{grid-column:auto}.drawer-actions{padding:12px 18px}.drawer-actions .primary{flex:1}.compare strong{font-size:14px}.recommendation li{grid-template-columns:1fr;gap:3px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* Motion system: short, causal transitions with one shared ease. */
+:root{--motion-ease:cubic-bezier(.22,.8,.3,1);--motion-fast:180ms;--motion-base:280ms}
+.button,.nav-cta,.adapt-nav,.what-if,.matters-panel button,.public-footer button{transition:transform var(--motion-fast) var(--motion-ease),background-color var(--motion-fast) ease,color var(--motion-fast) ease,box-shadow var(--motion-fast) ease}
+.button:active,.nav-cta:active,.adapt-nav:active,.what-if:active,.matters-panel button:active,.public-footer button:active{transform:translateY(1px) scale(.985)}
+.adapt-nav:hover,.what-if:hover{transform:translateY(-2px);box-shadow:0 7px 0 rgba(18,56,47,.12)}
+.landing-copy{animation:heroEnter .55s var(--motion-ease) both}
+.plan-canvas{animation:canvasEnter .65s .08s var(--motion-ease) both}
+.canvas-note{will-change:transform}.note-one{animation:gentleFloat 5.5s 1s ease-in-out infinite}.note-two{animation:gentleFloatTilt 6.5s .4s ease-in-out infinite}
+.plan-canvas .gathering-mark i,.workspace-cta .gathering-mark i{animation:gatheringBreathe 7s ease-in-out infinite}.plan-canvas .gathering-mark i:nth-child(2),.workspace-cta .gathering-mark i:nth-child(2){animation-delay:-1.4s}.plan-canvas .gathering-mark i:nth-child(3),.workspace-cta .gathering-mark i:nth-child(3){animation-delay:-2.8s}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .5s var(--motion-ease) var(--reveal-delay,0ms),transform .5s var(--motion-ease) var(--reveal-delay,0ms)}
+.reveal.is-visible{opacity:1;transform:translateY(0)}
+.setup-progress span{transition:width var(--motion-base) var(--motion-ease),background-color var(--motion-fast) ease}
+.setup-step.step-forward{animation:stepForward var(--motion-base) var(--motion-ease) both}.setup-step.step-back{animation:stepBack var(--motion-base) var(--motion-ease) both}
+.setup-error{animation:validationIn var(--motion-fast) var(--motion-ease) both}
+.value-update{display:block;animation:valueSet var(--motion-base) var(--motion-ease) both}
+.deficit-arrival{animation:deficitIn .35s var(--motion-ease) both}
+.segment-bar button{transition:width .35s var(--motion-ease),opacity var(--motion-fast) ease,filter var(--motion-fast) ease,transform var(--motion-fast) ease}
+.segment-bar button.allocation-changed{filter:saturate(1.18);transform:scaleY(1.08)}
+.map-pin{border:0;color:var(--ink);cursor:pointer;text-align:left;transition:transform var(--motion-fast) var(--motion-ease),box-shadow var(--motion-fast) ease;animation:pinArrive .38s var(--motion-ease) both}.pin-note{animation-delay:90ms}.map-pin:hover{transform:translateY(-3px)}.map-pin.selected{transform:translateY(-4px);box-shadow:7px 7px 0 var(--coral)}.map-pin.selected i{animation:pinSelect .3s var(--motion-ease)}
+.map-annotation{animation:detailOpen var(--motion-base) var(--motion-ease) both}.map-annotation b{color:white}.map-annotation small{color:#bad0c6}
+.journey:before{transform-origin:top;animation:lineDraw .7s .12s var(--motion-ease) both}.journey article{transition:background-color .3s ease,transform .3s var(--motion-ease)}.task-date-changed{animation:taskChanged 1.25s var(--motion-ease) both}
+.task-status:before{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin-right:6px;transition:transform var(--motion-fast) var(--motion-ease)}
+.recalculating{height:0;position:relative;z-index:2;transform:translateY(12px);display:grid;grid-template-columns:16px 1fr;align-items:center;padding:10px 14px;background:var(--saffron);font-size:10px;box-shadow:0 5px 0 rgba(18,56,47,.12);animation:statusIn var(--motion-fast) var(--motion-ease) both}.recalculating i{grid-row:1/3;width:9px;height:9px;border-radius:50%;background:var(--ink);animation:recalcPulse .7s ease-in-out infinite}.recalculating small{grid-column:2;color:var(--ink);opacity:.7}.preview{transition:opacity var(--motion-fast) ease,transform var(--motion-fast) var(--motion-ease)}.preview.is-recalculating{opacity:.38;transform:translateY(3px);pointer-events:none}
+.proposal-balance strong,.compare strong{animation:valueSet var(--motion-base) var(--motion-ease) both}.proposal-balance.risk{animation:deficitIn .35s var(--motion-ease) both}
+.change-list{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line);padding:10px 0}.change-list div{display:flex;justify-content:space-between;gap:10px;padding:7px 5px;font-size:9px;color:var(--muted);transition:background-color var(--motion-fast) ease}.change-list div.affected{background:#ffede7;color:var(--ink);animation:affectedIn .32s var(--motion-ease) both}.change-list strong{color:var(--coral2)}
+
+@keyframes heroEnter{from{opacity:0;transform:translateY(14px)}}
+@keyframes canvasEnter{from{opacity:0;transform:translateY(18px) scale(.985)}}
+@keyframes gentleFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes gentleFloatTilt{0%,100%{transform:translateY(0) rotate(3deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+@keyframes gatheringBreathe{0%,100%{transform:scale(1);opacity:.75}50%{transform:scale(1.025);opacity:1}}
+@keyframes stepForward{from{opacity:0;transform:translateX(18px)}}
+@keyframes stepBack{from{opacity:0;transform:translateX(-18px)}}
+@keyframes validationIn{from{opacity:0;transform:translateY(-5px)}}
+@keyframes valueSet{from{opacity:.25;transform:translateY(5px)}}
+@keyframes deficitIn{0%{opacity:.2}55%{background:#fff0ea}100%{opacity:1}}
+@keyframes pinArrive{from{opacity:0;transform:translateY(10px) scale(.97)}}
+@keyframes pinSelect{0%{transform:scale(.7)}70%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes detailOpen{from{opacity:0;transform:translateY(7px)}}
+@keyframes lineDraw{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes taskChanged{0%{background:transparent}25%{background:#fff0ea;transform:translateX(5px)}100%{background:transparent;transform:translateX(0)}}
+@keyframes statusIn{from{opacity:0;transform:translateY(7px)}}
+@keyframes recalcPulse{50%{opacity:.35;transform:scale(.75)}}
+@keyframes affectedIn{from{opacity:.25;transform:translateY(4px)}}
+
+@media(max-width:620px){.change-list{grid-template-columns:1fr}.recalculating{margin-left:4px;margin-right:4px}}
