@@ -1,0 +1,10 @@
+{
+  "description": "Plan weddings and family celebrations in Kerala with clear budgets, guest counts, timelines, and adaptable plans that show trade-offs when circumstances change.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
