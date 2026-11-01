@@ -3,6 +3,8 @@ import {
   getTimeline,
   sumPlan,
   formatINR,
+  generateTradeOffScenarios,
+  analyzeScheduleFeasibility,
   type Plan,
   type RecommendationData,
   type RecommendationResponse,
@@ -18,6 +20,7 @@ export type RecommendationRequest = {
   budget: number
   guests: number
   months: number
+  lockedKeys?: string[]
   context?: {
     occasion?: string
     location?: string
@@ -263,12 +266,15 @@ export async function handleApiRequest(
   }
 
   // Compute AUTHORITATIVE ground truth using deterministic logic
-  const groundTruthPlan = adaptPlan(rawBudget, rawGuests, rawMonths)
+  const lockedKeys = Array.isArray(payload.lockedKeys) ? payload.lockedKeys : []
+  const groundTruthPlan = adaptPlan(rawBudget, rawGuests, rawMonths, lockedKeys)
   const totalAllocated = sumPlan(groundTruthPlan)
   const balance = rawBudget - totalAllocated
   const isDeficit = balance < 0
   const timelineTasks = getTimeline(rawMonths)
   const isCompressed = rawMonths < 3
+  const feasibility = analyzeScheduleFeasibility(rawMonths)
+  const scenarios = generateTradeOffScenarios(groundTruthPlan, lockedKeys)
 
   const groundTruth = {
     budget: rawBudget,
@@ -280,6 +286,8 @@ export async function handleApiRequest(
     categories: groundTruthPlan.categories,
     timelineTasks,
     isCompressed,
+    feasibility,
+    scenarios,
   }
 
   // Check for Gemini API key
@@ -398,14 +406,25 @@ Provide your response as a JSON object with this exact structure:
       const jsonMatch = responseText.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         const rawJson = JSON.parse(jsonMatch[0])
-        if (rawJson.headline && rawJson.analysis && Array.isArray(rawJson.decisions)) {
+        if (
+          rawJson.headline &&
+          rawJson.analysis &&
+          Array.isArray(rawJson.decisions)
+        ) {
           parsedData = {
             headline: String(rawJson.headline),
             analysis: String(rawJson.analysis),
-            protectedInsight: String(rawJson.protectedInsight || fallbackRecs.protectedInsight),
+            protectedInsight: String(
+              rawJson.protectedInsight || fallbackRecs.protectedInsight,
+            ),
             tradeOffs: String(rawJson.tradeOffs || fallbackRecs.tradeOffs),
-            decisions: rawJson.decisions.length > 0 ? rawJson.decisions.map(String) : fallbackRecs.decisions,
-            timelineNote: String(rawJson.timelineNote || fallbackRecs.timelineNote),
+            decisions:
+              rawJson.decisions.length > 0
+                ? rawJson.decisions.map(String)
+                : fallbackRecs.decisions,
+            timelineNote: String(
+              rawJson.timelineNote || fallbackRecs.timelineNote,
+            ),
           }
           parseSuccess = true
         }
@@ -413,9 +432,10 @@ Provide your response as a JSON object with this exact structure:
     } catch {
       // Attempt repair if response was cut off before closing braces
       try {
-        const repaired = responseText
-          .replace(/,\s*"timelineNote"\s*:\s*"[^"]*$/, "")
-          .replace(/,\s*"[^"]*$/, "") + "\n}"
+        const repaired =
+          responseText
+            .replace(/,\s*"timelineNote"\s*:\s*"[^"]*$/, "")
+            .replace(/,\s*"[^"]*$/, "") + "\n}"
         const match = repaired.match(/\{[\s\S]*\}/)
         if (match) {
           const rawJson = JSON.parse(match[0])
@@ -423,12 +443,17 @@ Provide your response as a JSON object with this exact structure:
             parsedData = {
               headline: String(rawJson.headline),
               analysis: String(rawJson.analysis),
-              protectedInsight: String(rawJson.protectedInsight || fallbackRecs.protectedInsight),
+              protectedInsight: String(
+                rawJson.protectedInsight || fallbackRecs.protectedInsight,
+              ),
               tradeOffs: String(rawJson.tradeOffs || fallbackRecs.tradeOffs),
-              decisions: Array.isArray(rawJson.decisions) && rawJson.decisions.length > 0
-                ? rawJson.decisions.map(String)
-                : fallbackRecs.decisions,
-              timelineNote: String(rawJson.timelineNote || fallbackRecs.timelineNote),
+              decisions:
+                Array.isArray(rawJson.decisions) && rawJson.decisions.length > 0
+                  ? rawJson.decisions.map(String)
+                  : fallbackRecs.decisions,
+              timelineNote: String(
+                rawJson.timelineNote || fallbackRecs.timelineNote,
+              ),
             }
             parseSuccess = true
           }

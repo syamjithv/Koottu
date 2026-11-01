@@ -1,5 +1,7 @@
 import type { Plugin } from "vite"
 import { handleApiRequest } from "./recommendationsHandler.ts"
+import { handlePlanIntentRequest } from "./intentHandler.ts"
+import { handleVendorQuoteRequest } from "./vendorQuoteHandler.ts"
 
 export function recommendationsApiPlugin(): Plugin {
   return {
@@ -30,6 +32,18 @@ export function recommendationsApiPlugin(): Plugin {
         // Recommendations endpoint
         if (req.url === "/api/recommendations") {
           await handleApiRequest(req, res)
+          return
+        }
+
+        // Natural Language Plan Intent endpoint
+        if (req.url === "/api/plan-intent") {
+          await handlePlanIntentRequest(req, res)
+          return
+        }
+
+        // Vendor Quote analysis endpoint
+        if (req.url === "/api/vendor-quote") {
+          await handleVendorQuoteRequest(req, res)
           return
         }
 

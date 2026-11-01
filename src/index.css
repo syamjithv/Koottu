@@ -261,3 +261,364 @@
   }
 }
 
+
+/* ==========================================================================
+   KOOTTU EXTENDED CAPABILITIES (Multi-Scenario, Vendor Quotes, NLP & DAG)
+   Strictly preserving KOOTTU visual identity, colors, and typography.
+   ========================================================================== */
+
+/* Category Locks in Budget Legend */
+.category-lock-btn {
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--muted);
+  font-size: 8px;
+  padding: 2px 5px;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  cursor: pointer;
+  transition: all var(--motion-fast) ease;
+}
+.category-lock-btn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.category-lock-btn.is-locked {
+  background: var(--ink);
+  color: var(--saffron);
+  border-color: var(--ink);
+}
+
+/* Local Storage & Session State Header Pill */
+.storage-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: var(--muted);
+  background: var(--paper2);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 2px;
+}
+.storage-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sage);
+}
+.reset-demo-btn {
+  background: none;
+  border: 0;
+  color: var(--coral);
+  font-size: 9px;
+  text-decoration: underline;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+/* Multi-Scenario Trade-Off Cards */
+.scenarios-heading {
+  margin: 18px 0 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.scenarios-heading small {
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.scenarios-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.scenario-card {
+  border: 1px solid var(--line);
+  background: var(--white);
+  padding: 14px 16px;
+  display: grid;
+  gap: 8px;
+  position: relative;
+  transition: transform var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) ease;
+}
+.scenario-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--coral);
+}
+.scenario-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.scenario-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 16px;
+  color: var(--ink);
+  margin: 0;
+}
+.scenario-badge {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: #ffede7;
+  color: var(--coral2);
+  border: 1px solid var(--coral);
+}
+.scenario-desc {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 0;
+}
+.scenario-apply-btn {
+  justify-self: end;
+  background: var(--ink);
+  color: var(--white);
+  border: 0;
+  padding: 7px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background var(--motion-fast) ease;
+}
+.scenario-apply-btn:hover {
+  background: var(--coral);
+  color: var(--ink2);
+}
+
+/* Natural Language Plan Intent Box in AdaptDrawer */
+.intent-box {
+  background: var(--paper2);
+  border: 1px solid var(--line);
+  padding: 14px;
+  margin-bottom: 16px;
+  display: grid;
+  gap: 10px;
+}
+.intent-box label span {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.intent-input-row {
+  display: flex;
+  gap: 8px;
+}
+.intent-input-row input {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 12px;
+  background: var(--white);
+  border: 1px solid var(--line);
+}
+.intent-submit-btn {
+  background: var(--coral);
+  color: var(--ink2);
+  border: 0;
+  padding: 9px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--motion-fast) ease;
+}
+.intent-submit-btn:hover {
+  background: var(--coral2);
+  color: white;
+}
+.intent-result-banner {
+  background: #ffede7;
+  border-left: 3px solid var(--coral);
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--ink);
+  animation: affectedIn .28s var(--motion-ease) both;
+}
+
+/* Vendor Quotation Workspace Section */
+.vendor-section {
+  padding: 100px 0;
+  border-bottom: 1px solid var(--line);
+}
+.vendor-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 40px;
+  align-items: start;
+}
+.sample-quote-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.sample-btn {
+  background: var(--white);
+  border: 1px solid var(--line);
+  padding: 7px 11px;
+  font-size: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all var(--motion-fast) ease;
+}
+.sample-btn:hover, .sample-btn.is-active {
+  border-color: var(--coral);
+  color: var(--ink);
+  background: #ffede7;
+}
+.quote-textarea {
+  min-height: 180px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.quote-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+.quote-audit-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  box-shadow: 4px 4px 0 rgba(18, 56, 47, .06);
+}
+.quote-audit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+.quote-audit-header h3 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 24px;
+  margin: 0;
+  color: var(--ink);
+}
+.variance-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+.variance-badge.under-budget {
+  background: #eef7f2;
+  color: var(--ink);
+  border: 1px solid var(--sage);
+}
+.variance-badge.over-budget {
+  background: #fff0ea;
+  color: var(--risk);
+  border: 1px solid var(--risk);
+}
+.quote-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.quote-stats-grid div small {
+  display: block;
+  font-size: 8px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.quote-stats-grid div strong {
+  font-family: 'DM Serif Display', serif;
+  font-size: 18px;
+  color: var(--ink);
+}
+.risk-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.risk-tag {
+  background: #fff0ea;
+  color: var(--risk);
+  border: 1px solid var(--risk);
+  font-size: 9px;
+  padding: 3px 7px;
+  border-radius: 2px;
+}
+.ai-advice-panel {
+  background: var(--paper2);
+  border-left: 3px solid var(--saffron);
+  padding: 12px 14px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.ai-advice-panel b {
+  display: block;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.ai-advice-panel ul {
+  margin: 6px 0 0 16px;
+  padding: 0;
+}
+.ai-advice-panel li {
+  margin-bottom: 4px;
+}
+
+/* Timeline Critical Path & Feasibility */
+.critical-tag {
+  background: var(--ink);
+  color: var(--saffron);
+  font-size: 7px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-left: 6px;
+}
+.feasibility-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 4px 8px;
+  border-radius: 2px;
+}
+.feasibility-badge.is-feasible {
+  background: #eef7f2;
+  color: var(--ink);
+  border: 1px solid var(--sage);
+}
+.feasibility-badge.is-compressed {
+  background: #fff0ea;
+  color: var(--risk);
+  border: 1px solid var(--risk);
+}
+
+@media (max-width: 900px) {
+  .vendor-layout {
+    grid-template-columns: 1fr;
+  }
+}

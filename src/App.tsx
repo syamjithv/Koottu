@@ -8,7 +8,21 @@ import {
   sumPlan,
   type Plan,
   type RecommendationResponse,
-} from "./data"
+  type CategoryKey,
+  type VendorQuote,
+  type TradeOffScenario,
+  type StoredAppState,
+  type TaskStatus,
+  generateTradeOffScenarios,
+  analyzeScheduleFeasibility,
+  SAMPLE_QUOTES,
+  parseVendorQuote,
+  compareQuoteToPlan,
+  loadStoredAppState,
+  saveStoredAppState,
+  clearStoredAppState,
+  DEFAULT_SETUP,
+} from "./data.ts"
 
 type Stage = "landing" | "setup" | "workspace"
 type Setup = {
@@ -582,7 +596,15 @@ function SetupFlow({
   )
 }
 
-function BudgetPlanner({ plan }: { plan: Plan }) {
+function BudgetPlanner({
+  plan,
+  lockedKeys = [],
+  onToggleLock,
+}: {
+  plan: Plan
+  lockedKeys?: string[]
+  onToggleLock?: (key: string) => void
+}) {
   const [selected, setSelected] = useState(plan.categories[1].key)
   const spent = sumPlan(plan)
   const remaining = plan.budget - spent
@@ -682,21 +704,298 @@ function BudgetPlanner({ plan }: { plan: Plan }) {
         {detail.priority && (
           <span className="protected">Protected priority</span>
         )}
+        {lockedKeys.includes(detail.key) && (
+          <span
+            className="protected"
+            style={{
+              background: "var(--ink)",
+              color: "var(--saffron)",
+              borderColor: "var(--ink)",
+            }}
+          >
+            🔒 Locked Category
+          </span>
+        )}
       </div>
       <div className="budget-legend">
-        {plan.categories.map((category, index) => (
-          <button
-            key={category.key}
-            onClick={() => setSelected(category.key)}
-            className={`${selected === category.key ? "active" : ""} ${
-              changedKeys.includes(category.key) ? "allocation-changed" : ""
-            }`}
+        {plan.categories.map((category, index) => {
+          const isLocked = lockedKeys.includes(category.key)
+          return (
+            <button
+              key={category.key}
+              onClick={() => setSelected(category.key)}
+              className={`${selected === category.key ? "active" : ""} ${
+                changedKeys.includes(category.key) ? "allocation-changed" : ""
+              }`}
+            >
+              <i className={colors[index]} />
+              <span
+                style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
+              >
+                {category.name}
+                {onToggleLock && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className={`category-lock-btn ${
+                      isLocked ? "is-locked" : ""
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleLock(category.key)
+                    }}
+                    title={
+                      isLocked
+                        ? "Category locked against budget reductions"
+                        : "Lock this allocation"
+                    }
+                  >
+                    {isLocked ? "🔒" : "🔓"}
+                  </span>
+                )}
+              </span>
+              <b>{formatINR(category.amount)}</b>
+            </button>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function VendorQuotesSection({
+  plan,
+  quotes,
+  onAddQuote,
+}: {
+  plan: Plan
+  quotes: VendorQuote[]
+  onAddQuote: (quote: VendorQuote) => void
+}) {
+  const [activeSampleIdx, setActiveSampleIdx] = useState<number>(0)
+  const [rawText, setRawText] = useState(SAMPLE_QUOTES[0].rawText)
+  const [categoryHint, setCategoryHint] = useState<CategoryKey>("food")
+  const [analyzedQuote, setAnalyzedQuote] = useState<VendorQuote>(() =>
+    parseVendorQuote(SAMPLE_QUOTES[0].rawText, "food"),
+  )
+  const [aiAdvice, setAiAdvice] = useState<{
+    summary: string
+    tips: string[]
+  } | null>(null)
+  const [loadingAi, setLoadingAi] = useState(false)
+
+  const comparison = useMemo(
+    () => compareQuoteToPlan(analyzedQuote, plan),
+    [analyzedQuote, plan],
+  )
+
+  const handleSelectSample = (idx: number) => {
+    setActiveSampleIdx(idx)
+    const sample = SAMPLE_QUOTES[idx]
+    setRawText(sample.rawText)
+    setCategoryHint(sample.category)
+    const parsed = parseVendorQuote(sample.rawText, sample.category)
+    setAnalyzedQuote(parsed)
+    setAiAdvice(null)
+  }
+
+  const handleAudit = async () => {
+    setLoadingAi(true)
+    try {
+      const res = await fetch("/api/vendor-quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rawText,
+          categoryHint,
+          currentPlan: {
+            budget: plan.budget,
+            guests: plan.guests,
+            months: plan.months,
+          },
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.parsedQuote) {
+          setAnalyzedQuote(data.parsedQuote)
+          onAddQuote(data.parsedQuote)
+        }
+        if (data.aiNegotiationAdvice) setAiAdvice(data.aiNegotiationAdvice)
+      }
+    } catch {
+      // Deterministic fallback already active
+    } finally {
+      setLoadingAi(false)
+    }
+  }
+
+  return (
+    <section className="workspace-section vendor-section" id="quotes">
+      <div className="section-heading">
+        <div>
+          <span className="kicker">
+            Vendor intelligence · Kerala market rates
+          </span>
+          <h2>Audit quotes against verified allocations.</h2>
+        </div>
+        <span className="prototype-label">
+          Deterministic GST & contract risk extraction
+        </span>
+      </div>
+      <div className="vendor-layout">
+        <div>
+          <small
+            style={{
+              display: "block",
+              marginBottom: 8,
+              fontSize: 10,
+              textTransform: "uppercase",
+              letterSpacing: ".08em",
+              color: "var(--muted)",
+            }}
           >
-            <i className={colors[index]} />
-            {category.name}
-            <b>{formatINR(category.amount)}</b>
-          </button>
-        ))}
+            Load realistic Kerala celebration quote:
+          </small>
+          <div className="sample-quote-picker">
+            {SAMPLE_QUOTES.map((sample, idx) => (
+              <button
+                key={sample.title}
+                type="button"
+                className={`sample-btn ${
+                  activeSampleIdx === idx ? "is-active" : ""
+                }`}
+                onClick={() => handleSelectSample(idx)}
+              >
+                {sample.title}
+              </button>
+            ))}
+          </div>
+          <textarea
+            className="quote-textarea"
+            value={rawText}
+            onChange={(e) => {
+              setRawText(e.target.value)
+              setAnalyzedQuote(parseVendorQuote(e.target.value, categoryHint))
+            }}
+            placeholder="Paste vendor contract or quotation text here..."
+          />
+          <div className="quote-actions-row">
+            <span style={{ fontSize: 10, color: "var(--muted)" }}>
+              Category: <b>{analyzedQuote.category.toUpperCase()}</b>
+            </span>
+            <button
+              type="button"
+              className="button primary green"
+              style={{ padding: "9px 15px", fontSize: 11 }}
+              disabled={loadingAi}
+              onClick={handleAudit}
+            >
+              {loadingAi
+                ? "✦ Auditing contract..."
+                : "✦ Audit with Gemini 3.8 Flash"}
+            </button>
+          </div>
+        </div>
+
+        <div className="quote-audit-card">
+          <div className="quote-audit-header">
+            <div>
+              <span className="kicker">{analyzedQuote.category} quotation</span>
+              <h3>{analyzedQuote.vendorName}</h3>
+            </div>
+            <span
+              className={`variance-badge ${
+                comparison.isOverBudget ? "over-budget" : "under-budget"
+              }`}
+            >
+              {comparison.isOverBudget
+                ? `+${formatINR(comparison.variance)} Over Budget`
+                : `${formatINR(Math.abs(comparison.variance))} Under Budget`}
+            </span>
+          </div>
+
+          <div className="quote-stats-grid">
+            <div>
+              <small>Quoted Base</small>
+              <strong>{formatINR(analyzedQuote.quotedAmount)}</strong>
+            </div>
+            <div>
+              <small>GST Status</small>
+              <strong style={{ fontSize: 16 }}>
+                {analyzedQuote.gstIncluded
+                  ? "Included"
+                  : `+${analyzedQuote.gstRatePercent}% Extra`}
+              </strong>
+            </div>
+            <div>
+              <small>Advance Token</small>
+              <strong>{formatINR(analyzedQuote.advanceAmount)}</strong>
+              <span style={{ fontSize: 9, color: "var(--muted)" }}>
+                ({analyzedQuote.advancePaymentPercent}% upfront)
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <small
+              style={{
+                display: "block",
+                fontSize: 9,
+                textTransform: "uppercase",
+                color: "var(--muted)",
+                marginBottom: 6,
+              }}
+            >
+              Category Budget Comparison
+            </small>
+            <p
+              style={{
+                fontSize: 12,
+                color: "var(--ink)",
+                margin: 0,
+                lineHeight: 1.5,
+              }}
+            >
+              {comparison.recommendation}
+            </p>
+          </div>
+
+          {analyzedQuote.riskFlags.length > 0 && (
+            <div>
+              <small
+                style={{
+                  display: "block",
+                  fontSize: 9,
+                  textTransform: "uppercase",
+                  color: "var(--risk)",
+                  marginBottom: 6,
+                }}
+              >
+                ⚠ Contract Risk & Hidden Fee Alerts:
+              </small>
+              <div className="risk-tags-list">
+                {analyzedQuote.riskFlags.map((risk, i) => (
+                  <span key={i} className="risk-tag">
+                    {risk}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {aiAdvice && (
+            <div className="ai-advice-panel">
+              <b>✦ Gemini 3.8 Flash Negotiation Strategy:</b>
+              <span>{aiAdvice.summary}</span>
+              <ul>
+                {aiAdvice.tips.map((tip, idx) => (
+                  <li key={idx}>{tip}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   )
@@ -771,15 +1070,27 @@ function EventMap({ location }: { location: string }) {
   )
 }
 
-function Timeline({ months }: { months: number }) {
-  const tasks = getTimeline(months)
+function Timeline({
+  months,
+  customStatuses = {},
+  onToggleStatus,
+}: {
+  months: number
+  customStatuses?: Record<string, TaskStatus>
+  onToggleStatus?: (taskId: string) => void
+}) {
+  const tasks = getTimeline(months, customStatuses)
+  const feasibility = useMemo(
+    () => analyzeScheduleFeasibility(months),
+    [months],
+  )
   const previousMonths = useRef(months)
   const [changedIndices, setChangedIndices] = useState<number[]>([])
 
   useEffect(() => {
     if (previousMonths.current !== months) {
-      const oldTasks = getTimeline(previousMonths.current)
-      const newTasks = getTimeline(months)
+      const oldTasks = getTimeline(previousMonths.current, customStatuses)
+      const newTasks = getTimeline(months, customStatuses)
       const changed: number[] = []
       newTasks.forEach((task, idx) => {
         if (
@@ -796,20 +1107,33 @@ function Timeline({ months }: { months: number }) {
         return () => window.clearTimeout(timer)
       }
     }
-  }, [months])
+  }, [months, customStatuses])
 
   return (
     <section className="workspace-section journey-section" id="timeline">
       <div className="section-heading">
         <div>
-          <span className="kicker">{months}-month planning window</span>
+          <span className="kicker">
+            {months}-month planning window · DAG Scheduling Engine
+          </span>
           <h2>The path to the celebration.</h2>
         </div>
-        {months < 3 && (
-          <span className="timeline-risk">
-            Compressed timeline · attention needed
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <span
+            className={`feasibility-badge ${
+              feasibility.isFeasible ? "is-feasible" : "is-compressed"
+            }`}
+          >
+            {feasibility.isFeasible
+              ? `✓ Feasible (${feasibility.slackDays}d buffer)`
+              : `⚠ Compression Alert (${Math.abs(feasibility.slackDays)}d deficit)`}
           </span>
-        )}
+          {months < 3 && (
+            <span className="timeline-risk">
+              Compressed timeline · attention needed
+            </span>
+          )}
+        </div>
       </div>
       <div className="journey">
         {tasks.map((task, index) => (
@@ -824,14 +1148,32 @@ function Timeline({ months }: { months: number }) {
             </div>
             <div className="journey-copy">
               <small>{task.due}</small>
-              <h3>{task.title}</h3>
+              <h3>
+                {task.title}
+                {task.isCriticalPath && (
+                  <span
+                    className="critical-tag"
+                    title="On Critical Path: delays affect completion date"
+                  >
+                    Critical Path
+                  </span>
+                )}
+              </h3>
               {task.dependency && (
                 <p>
                   Depends on: <b>{task.dependency.replace("After ", "")}</b>
                 </p>
               )}
             </div>
-            <span className={`task-status status-${index}`}>{task.status}</span>
+            <button
+              type="button"
+              className={`task-status status-${index}`}
+              style={{ cursor: "pointer", background: "none" }}
+              title="Click to cycle task status"
+              onClick={() => onToggleStatus && onToggleStatus(task.id)}
+            >
+              {task.status}
+            </button>
           </article>
         ))}
       </div>
@@ -843,32 +1185,87 @@ function AdaptDrawer({
   current,
   currentLabel,
   setup,
+  lockedKeys = [],
   onClose,
   onAccept,
 }: {
   current: Plan
   currentLabel: string
   setup: Setup
+  lockedKeys?: string[]
   onClose: () => void
   onAccept: (plan: Plan) => void
 }) {
   const [budget, setBudget] = useState(current.budget)
   const [guests, setGuests] = useState(current.guests)
   const [months, setMonths] = useState(current.months)
+  const [activeLockedKeys, setActiveLockedKeys] = useState<string[]>(lockedKeys)
   const [closing, setClosing] = useState<"accept" | "cancel" | null>(null)
 
-  // Synchronous recalculation - no artificial loading delay
+  // Natural language plan adjustment state
+  const [intentInput, setIntentInput] = useState("")
+  const [intentLoading, setIntentLoading] = useState(false)
+  const [intentSummary, setIntentSummary] = useState<string | null>(null)
+
+  // Synchronous recalculation with locked categories support
   const proposal = useMemo(
-    () => adaptPlan(budget, guests, months),
-    [budget, guests, months],
+    () => adaptPlan(budget, guests, months, activeLockedKeys),
+    [budget, guests, months, activeLockedKeys],
   )
   const proposedSpend = sumPlan(proposal)
   const balance = budget - proposedSpend
   const changed =
     budget !== current.budget ||
     guests !== current.guests ||
-    months !== current.months
+    months !== current.months ||
+    activeLockedKeys.length !== lockedKeys.length
   const invalid = budget < 300000 || guests < 20 || guests > 500
+
+  // Multi-scenario trade-off generation
+  const tradeOffScenarios = useMemo(() => {
+    if (balance >= 0) return []
+    return generateTradeOffScenarios(proposal, activeLockedKeys)
+  }, [proposal, balance, activeLockedKeys])
+
+  const handleApplyIntent = async () => {
+    if (!intentInput.trim()) return
+    setIntentLoading(true)
+    try {
+      const res = await fetch("/api/plan-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: intentInput,
+          currentPlan: { budget, guests, months, lockedKeys: activeLockedKeys },
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.intent?.recognized) {
+          if (data.financials?.budget) setBudget(data.financials.budget)
+          if (data.financials?.guests) setGuests(data.financials.guests)
+          if (data.financials?.months) setMonths(data.financials.months)
+          if (
+            Array.isArray(data.intent.lockedCategories) &&
+            data.intent.lockedCategories.length > 0
+          ) {
+            setActiveLockedKeys((prev) =>
+              Array.from(new Set([...prev, ...data.intent.lockedCategories])),
+            )
+          }
+          setIntentSummary(`✓ Interpreted: ${data.intent.summary}`)
+        } else {
+          setIntentSummary(
+            data.intent?.summary || "Could not parse numerical changes.",
+          )
+        }
+      }
+    } catch {
+      setIntentSummary("Could not connect to plan intent service.")
+    } finally {
+      setIntentLoading(false)
+    }
+  }
 
   // Gemini AI Recommendation state & cache
   const [aiLoading, setAiLoading] = useState(false)
@@ -880,7 +1277,7 @@ function AdaptDrawer({
 
   const fetchRecommendations = async (forceFresh = false) => {
     if (invalid) return
-    const cacheKey = `${budget}:${guests}:${months}:${setup.priorities.join(",")}`
+    const cacheKey = `${budget}:${guests}:${months}:${setup.priorities.join(",")}:${activeLockedKeys.join(",")}`
     if (!forceFresh && cacheRef.current.has(cacheKey)) {
       setAiResponse(cacheRef.current.get(cacheKey)!)
       setAiRequested(true)
@@ -898,6 +1295,7 @@ function AdaptDrawer({
           budget,
           guests,
           months,
+          lockedKeys: activeLockedKeys,
           context: {
             occasion: setup.occasion,
             location: setup.location,
@@ -999,6 +1397,38 @@ function AdaptDrawer({
           Change the circumstances, not the whole plan. Food quality stays
           protected while every trade-off remains visible.
         </p>
+
+        <div className="intent-box">
+          <label>
+            <span>Express changes in plain English (Gemini 3.8 Flash)</span>
+            <div className="intent-input-row">
+              <input
+                type="text"
+                placeholder="e.g. Reduce budget by ₹50,000 and lock photography"
+                value={intentInput}
+                onChange={(e) => setIntentInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    handleApplyIntent()
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="intent-submit-btn"
+                disabled={intentLoading || !intentInput.trim()}
+                onClick={handleApplyIntent}
+              >
+                {intentLoading ? "✦ Interpreting..." : "✦ Interpret"}
+              </button>
+            </div>
+          </label>
+          {intentSummary && (
+            <div className="intent-result-banner">{intentSummary}</div>
+          )}
+        </div>
+
         <div className="controls">
           <label>
             <span>
@@ -1128,6 +1558,39 @@ function AdaptDrawer({
                 )
               })}
             </div>
+
+            {balance < 0 && tradeOffScenarios.length > 0 && (
+              <div className="scenarios-section">
+                <div className="scenarios-heading">
+                  <span className="kicker">
+                    Deterministic Trade-Off Options
+                  </span>
+                  <small>3 Mathematically Verified Scenarios</small>
+                </div>
+                <div className="scenarios-list">
+                  {tradeOffScenarios.map((sc) => (
+                    <article key={sc.id} className="scenario-card">
+                      <div className="scenario-header">
+                        <h4 className="scenario-title">{sc.title}</h4>
+                        <span className="scenario-badge">{sc.badge}</span>
+                      </div>
+                      <p className="scenario-desc">{sc.description}</p>
+                      <button
+                        type="button"
+                        className="scenario-apply-btn"
+                        onClick={() => {
+                          setBudget(sc.proposedPlan.budget)
+                          setGuests(sc.proposedPlan.guests)
+                          setMonths(sc.proposedPlan.months)
+                        }}
+                      >
+                        Preview & Apply {sc.title} →
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
             {aiResponse ? (
               <div
                 className={`recommendation ${aiLoading ? "ai-loading" : ""}`}
@@ -1289,6 +1752,13 @@ function Workspace({
   setup,
   plan,
   accepted,
+  lockedKeys = [],
+  vendorQuotes = [],
+  customTaskStatuses = {},
+  onToggleLock,
+  onAddQuote,
+  onToggleStatus,
+  onResetDemo,
   onAdapt,
   onAccept,
   onHome,
@@ -1296,6 +1766,13 @@ function Workspace({
   setup: Setup
   plan: Plan
   accepted: boolean
+  lockedKeys?: string[]
+  vendorQuotes?: VendorQuote[]
+  customTaskStatuses?: Record<string, TaskStatus>
+  onToggleLock?: (key: string) => void
+  onAddQuote?: (quote: VendorQuote) => void
+  onToggleStatus?: (taskId: string) => void
+  onResetDemo?: () => void
   onAdapt: () => void
   onAccept: (plan: Plan) => void
   onHome: () => void
@@ -1316,17 +1793,34 @@ function Workspace({
   return (
     <div className="workspace">
       <header className="workspace-nav">
-        <button
-          className="brand-button"
-          onClick={onHome}
-          aria-label="KOOTTU home"
-        >
-          <Brand />
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <button
+            className="brand-button"
+            onClick={onHome}
+            aria-label="KOOTTU home"
+          >
+            <Brand />
+          </button>
+          <div className="storage-pill">
+            <i className="storage-dot" />
+            <span>Saved locally</span>
+            {onResetDemo && (
+              <button
+                type="button"
+                className="reset-demo-btn"
+                onClick={onResetDemo}
+                title="Reset to benchmark ₹6.4L / 230 guests Kerala wedding demo"
+              >
+                Reset Demo
+              </button>
+            )}
+          </div>
+        </div>
         <nav aria-label="Workspace navigation">
           {[
             ["Overview", "#overview"],
             ["Budget", "#budget"],
+            ["Quotes", "#quotes"],
             ["Place", "#map"],
             ["Timeline", "#timeline"],
           ].map(([label, id]) => (
@@ -1404,7 +1898,18 @@ function Workspace({
           </div>
         </section>
         <div className="reveal">
-          <BudgetPlanner plan={plan} />
+          <BudgetPlanner
+            plan={plan}
+            lockedKeys={lockedKeys}
+            onToggleLock={onToggleLock}
+          />
+        </div>
+        <div className="reveal">
+          <VendorQuotesSection
+            plan={plan}
+            quotes={vendorQuotes}
+            onAddQuote={onAddQuote || (() => undefined)}
+          />
         </div>
         <div className="workspace-pair reveal">
           <EventMap location={setup.location} />
@@ -1430,7 +1935,11 @@ function Workspace({
           </aside>
         </div>
         <div className="reveal">
-          <Timeline months={plan.months} />
+          <Timeline
+            months={plan.months}
+            customStatuses={customTaskStatuses}
+            onToggleStatus={onToggleStatus}
+          />
         </div>
         <section className="workspace-cta">
           <div className="gathering-mark" aria-hidden="true">
@@ -1461,6 +1970,7 @@ function Workspace({
           current={plan}
           currentLabel={accepted ? "Accepted plan" : "Original plan"}
           setup={setup}
+          lockedKeys={lockedKeys}
           onClose={() => setDrawerOpen(false)}
           onAccept={handleAcceptProposal}
         />
@@ -1470,19 +1980,91 @@ function Workspace({
 }
 
 export default function App() {
-  const [stage, setStage] = useState<Stage>("landing")
-  const [plan, setPlan] = useState(originalPlan)
-  const [accepted, setAccepted] = useState(false)
-  const [setup, setSetup] = useState<Setup>({
-    occasion: "Wedding",
-    date: "",
-    months: 4,
-    guests: 200,
-    location: "Kochi",
-    budget: 800000,
-    priorities: ["Food and catering", "Guest experience"],
-    requirements: "Keep food quality high and retain essential arrangements.",
-  })
+  const [initialLoaded] = useState(() => loadStoredAppState())
+  const [stage, setStage] = useState<Stage>(() =>
+    initialLoaded ? "workspace" : "landing",
+  )
+  const [setup, setSetup] = useState<Setup>(
+    () => initialLoaded?.setup || DEFAULT_SETUP,
+  )
+  const [plan, setPlan] = useState<Plan>(
+    () => initialLoaded?.plan || originalPlan,
+  )
+  const [accepted, setAccepted] = useState<boolean>(() =>
+    Boolean(initialLoaded?.accepted),
+  )
+  const [lockedKeys, setLockedKeys] = useState<string[]>(
+    () => initialLoaded?.lockedKeys || [],
+  )
+  const [vendorQuotes, setVendorQuotes] = useState<VendorQuote[]>(
+    () => initialLoaded?.vendorQuotes || [],
+  )
+  const [customTaskStatuses, setCustomTaskStatuses] =
+    useState<Record<string, TaskStatus>>(
+      () => initialLoaded?.customTaskStatuses || {},
+    )
+
+  // Auto-save to localStorage with versioning
+  useEffect(() => {
+    saveStoredAppState({
+      version: 2,
+      lastUpdated: new Date().toISOString(),
+      setup,
+      plan,
+      accepted,
+      lockedKeys,
+      vendorQuotes,
+      customTaskStatuses,
+      history: [],
+    })
+  }, [setup, plan, accepted, lockedKeys, vendorQuotes, customTaskStatuses])
+
+  const handleToggleLock = (key: string) => {
+    setLockedKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    )
+  }
+
+  const handleAddQuote = (quote: VendorQuote) => {
+    setVendorQuotes((prev) => [quote, ...prev.filter((q) => q.id !== quote.id)])
+  }
+
+  const handleToggleTaskStatus = (taskId: string) => {
+    const cycle: Record<TaskStatus, TaskStatus> = {
+      "Not started": "In progress",
+      "In progress": "Needs review",
+      "Needs review": "Completed",
+      Completed: "Not started",
+    }
+    setCustomTaskStatuses((prev) => {
+      const current = prev[taskId] || "Not started"
+      return { ...prev, [taskId]: cycle[current] }
+    })
+  }
+
+  const handleResetDemo = () => {
+    // Reset to benchmark Kerala Wedding demo: ₹6,40,000, 230 guests, 4 months
+    const demoSetup: Setup = {
+      occasion: "Wedding",
+      date: "4-month planning window",
+      months: 4,
+      guests: 230,
+      location: "Kochi, Kerala",
+      budget: 640000,
+      priorities: ["Food and catering", "Photography"],
+      requirements:
+        "Traditional vegetarian sadya feast; protect catering quality.",
+    }
+    const demoPlan = adaptPlan(640000, 230, 4, ["food"])
+    setSetup(demoSetup)
+    setPlan(demoPlan)
+    setAccepted(false)
+    setLockedKeys(["food"])
+    setCustomTaskStatuses({})
+    setStage("workspace")
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
   if (stage === "landing") return <Landing onStart={() => setStage("setup")} />
   if (stage === "setup")
     return (
@@ -1491,7 +2073,9 @@ export default function App() {
         onChange={setSetup}
         onExit={() => setStage("landing")}
         onComplete={() => {
-          setPlan(adaptPlan(setup.budget, setup.guests, setup.months))
+          setPlan(
+            adaptPlan(setup.budget, setup.guests, setup.months, lockedKeys),
+          )
           setAccepted(false)
           setStage("workspace")
           window.scrollTo(0, 0)
@@ -1503,6 +2087,13 @@ export default function App() {
       setup={setup}
       plan={plan}
       accepted={accepted}
+      lockedKeys={lockedKeys}
+      vendorQuotes={vendorQuotes}
+      customTaskStatuses={customTaskStatuses}
+      onToggleLock={handleToggleLock}
+      onAddQuote={handleAddQuote}
+      onToggleStatus={handleToggleTaskStatus}
+      onResetDemo={handleResetDemo}
       onAdapt={() => undefined}
       onHome={() => setStage("landing")}
       onAccept={(next) => {
