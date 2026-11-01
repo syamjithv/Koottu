@@ -631,7 +631,9 @@ function BudgetPlanner({
   const [selected, setSelected] = useState(plan.categories[1].key)
   const [showStressTests, setShowStressTests] = useState(false)
   const spent = sumPlan(plan)
-  const contingencyReserve = Math.round((plan.budget * contingencyPercent) / 100)
+  const contingencyReserve = Math.round(
+    (plan.budget * contingencyPercent) / 100,
+  )
   const remaining = plan.budget - (spent + contingencyReserve)
   const detail =
     plan.categories.find((item) => item.key === selected) || plan.categories[0]
@@ -669,23 +671,52 @@ function BudgetPlanner({
         deficitAmount: remaining < 0 ? Math.abs(remaining) : 0,
         foodPerPerson: 1500,
       },
-      contingency: { percent: contingencyPercent, reserveAmount: contingencyReserve, isManual: false },
+      contingency: {
+        percent: contingencyPercent,
+        reserveAmount: contingencyReserve,
+        isManual: false,
+      },
       categories: plan.categories.map((c) => ({ ...c })),
       lockedKeys,
       tradeOffScenarios: [],
       tasks: [],
-      timelineFeasibility: { isFeasible: true, totalDurationDays: 69, availableDays: 120, slackDays: 51, criticalPathTaskIds: [], cycleDetected: false, conflicts: [], summary: "" },
+      timelineFeasibility: {
+        isFeasible: true,
+        totalDurationDays: 69,
+        availableDays: 120,
+        slackDays: 51,
+        criticalPathTaskIds: [],
+        cycleDetected: false,
+        conflicts: [],
+        summary: "",
+      },
       vendors: [],
       acceptedQuotes: {},
       runSheet: [],
       ideas: [],
-      readiness: { overallScore: 80, budgetScore: 20, timelineScore: 25, vendorScore: 15, taskScore: 20, riskDeductions: 0, reasons: [], summary: "" },
+      readiness: {
+        overallScore: 80,
+        budgetScore: 20,
+        timelineScore: 25,
+        vendorScore: 15,
+        taskScore: 20,
+        riskDeductions: 0,
+        reasons: [],
+        summary: "",
+      },
       insights: [],
       history: [],
       planningStatus: "configured",
     }
     return runBudgetStressTests(dummyPlan)
-  }, [plan, spent, contingencyReserve, remaining, contingencyPercent, lockedKeys])
+  }, [
+    plan,
+    spent,
+    contingencyReserve,
+    remaining,
+    contingencyPercent,
+    lockedKeys,
+  ])
 
   useEffect(() => {
     const changed: string[] = []
@@ -834,10 +865,12 @@ function BudgetPlanner({
       <div className="contingency-bar">
         <div>
           <strong style={{ color: "var(--ink)", display: "block" }}>
-            Contingency Reserve: {contingencyPercent}% ({formatINR(contingencyReserve)})
+            Contingency Reserve: {contingencyPercent}% (
+            {formatINR(contingencyReserve)})
           </strong>
           <span style={{ fontSize: 10, color: "var(--muted)" }}>
-            Emergency reserve buffer for unexpected food inflation or monsoon setups.
+            Emergency reserve buffer for unexpected food inflation or monsoon
+            setups.
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -863,25 +896,38 @@ function BudgetPlanner({
         <button
           type="button"
           className="scenario-apply-btn"
+          aria-expanded={showStressTests}
+          aria-controls="budget-stress-grid"
           style={{ width: "100%", textAlign: "center", padding: "8px 12px" }}
           onClick={() => setShowStressTests(!showStressTests)}
         >
-          {showStressTests ? "▲ Hide" : "⚡ Simulate"} Budget Stress Scenarios (+20% Guests, Venue Surge, Monsoon Emergency)
+          {showStressTests ? "▲ Hide" : "⚡ Simulate"} Budget Stress Scenarios
+          (+20% Guests, Venue Surge, Monsoon Emergency)
         </button>
 
         {showStressTests && (
-          <div className="stress-grid" aria-live="polite">
+          <div
+            id="budget-stress-grid"
+            className="stress-grid"
+            aria-live="polite"
+          >
             {stressScenarios.map((sc) => (
               <div key={sc.id} className="stress-card">
                 <h4>{sc.title}</h4>
                 <p>{sc.description}</p>
                 <div>
-                  <small style={{ color: "var(--muted)", display: "block" }}>Calculated Impact:</small>
+                  <small style={{ color: "var(--muted)", display: "block" }}>
+                    Calculated Impact:
+                  </small>
                   <span className="stress-deficit">
-                    {sc.resultingDeficit > 0 ? `Deficit: -${formatINR(sc.resultingDeficit)}` : "Balanced"}
+                    {sc.resultingDeficit > 0
+                      ? `Deficit: -${formatINR(sc.resultingDeficit)}`
+                      : "Balanced"}
                   </span>
                 </div>
-                <div style={{ marginTop: 4, fontSize: 10, color: "var(--muted)" }}>
+                <div
+                  style={{ marginTop: 4, fontSize: 10, color: "var(--muted)" }}
+                >
                   {sc.impactSummary}
                 </div>
               </div>
@@ -1070,6 +1116,8 @@ function VendorQuotesSection({
               <button
                 type="button"
                 className="insight-action-btn"
+                aria-expanded={showInquiryModal}
+                aria-controls="vendor-inquiry-box"
                 onClick={() => setShowInquiryModal(!showInquiryModal)}
               >
                 💬 {showInquiryModal ? "Hide" : "Inquiry Draft"}
@@ -1089,9 +1137,29 @@ function VendorQuotesSection({
           </div>
 
           {showInquiryModal && (
-            <div style={{ background: "var(--paper2)", border: "1px solid var(--line)", padding: 12, borderRadius: 4, marginTop: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <strong style={{ fontSize: 11 }}>Kerala Vendor Inquiry Draft (WhatsApp/Email)</strong>
+            <div
+              id="vendor-inquiry-box"
+              role="region"
+              aria-label="Kerala vendor inquiry draft"
+              style={{
+                background: "var(--paper2)",
+                border: "1px solid var(--line)",
+                padding: 12,
+                borderRadius: 4,
+                marginTop: 10,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 6,
+                }}
+              >
+                <strong style={{ fontSize: 11 }}>
+                  Kerala Vendor Inquiry Draft (WhatsApp/Email)
+                </strong>
                 <button
                   type="button"
                   className="insight-action-btn"
@@ -1100,7 +1168,16 @@ function VendorQuotesSection({
                   {copiedDraft ? "✓ Copied!" : "Copy Text"}
                 </button>
               </div>
-              <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: 10, color: "var(--ink)", margin: 0, lineHeight: 1.4 }}>
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  fontFamily: "inherit",
+                  fontSize: 10,
+                  color: "var(--ink)",
+                  margin: 0,
+                  lineHeight: 1.4,
+                }}
+              >
                 {inquiryDraft}
               </pre>
             </div>
@@ -1110,10 +1187,14 @@ function VendorQuotesSection({
             <button
               type="button"
               className="scenario-apply-btn"
+              aria-expanded={showComparisonMatrix}
+              aria-controls="quote-comparison-matrix"
               style={{ width: "100%", padding: "7px 10px" }}
               onClick={() => setShowComparisonMatrix(!showComparisonMatrix)}
             >
-              {showComparisonMatrix ? "▲ Hide Comparison" : "📊 Compare 3 Vendor Quotes in Category"}
+              {showComparisonMatrix
+                ? "▲ Hide Comparison"
+                : "📊 Compare 3 Vendor Quotes in Category"}
             </button>
           </div>
         </div>
@@ -1124,7 +1205,14 @@ function VendorQuotesSection({
               <span className="kicker">{analyzedQuote.category} quotation</span>
               <h3>{analyzedQuote.vendorName}</h3>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                gap: 6,
+              }}
+            >
               <span
                 className={`variance-badge ${
                   comparison.isOverBudget ? "over-budget" : "under-budget"
@@ -1145,7 +1233,9 @@ function VendorQuotesSection({
                   }}
                   onClick={() => onAcceptQuote(analyzedQuote)}
                 >
-                  {isAccepted ? "✓ Contracted" : `Accept Quote for ${analyzedQuote.category} →`}
+                  {isAccepted
+                    ? "✓ Contracted"
+                    : `Accept Quote for ${analyzedQuote.category} →`}
                 </button>
               )}
             </div>
@@ -1235,8 +1325,26 @@ function VendorQuotesSection({
       </div>
 
       {showComparisonMatrix && (
-        <div style={{ marginTop: 16, background: "var(--card)", border: "1px solid var(--line)", padding: 16, borderRadius: 4 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div
+          id="quote-comparison-matrix"
+          role="region"
+          aria-label="3-Quote value comparison"
+          style={{
+            marginTop: 16,
+            background: "var(--card)",
+            border: "1px solid var(--line)",
+            padding: 16,
+            borderRadius: 4,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 8,
+            }}
+          >
             <div>
               <strong style={{ fontSize: 13, color: "var(--ink)" }}>
                 3-Quote Value Comparison ({categoryHint.toUpperCase()} Category)
@@ -1245,10 +1353,21 @@ function VendorQuotesSection({
                 Category budget allocated: {formatINR(catAllocated)}
               </small>
             </div>
-            <span className="prototype-label">Transparent Value Scoring (0-100)</span>
+            <span className="prototype-label">
+              Transparent Value Scoring (0-100)
+            </span>
           </div>
 
-          <p style={{ fontSize: 11, color: "var(--forest)", background: "var(--paper2)", padding: "6px 10px", borderRadius: 3, margin: "6px 0 12px" }}>
+          <p
+            style={{
+              fontSize: 11,
+              color: "var(--forest)",
+              background: "var(--paper2)",
+              padding: "6px 10px",
+              borderRadius: 3,
+              margin: "6px 0 12px",
+            }}
+          >
             💡 <b>Engine Analysis:</b> {matrix.transparentReasoning}
           </p>
 
@@ -1266,21 +1385,48 @@ function VendorQuotesSection({
             </thead>
             <tbody>
               {matrix.quotes.map((q) => (
-                <tr key={q.quoteId} className={q.quoteId === matrix.recommendedQuoteId ? "is-best" : ""}>
+                <tr
+                  key={q.quoteId}
+                  className={
+                    q.quoteId === matrix.recommendedQuoteId ? "is-best" : ""
+                  }
+                >
                   <td>
                     <strong>{q.vendorName}</strong>
                     {q.quoteId === matrix.recommendedQuoteId && (
-                      <span className="critical-tag" style={{ background: "var(--forest)", color: "#fff", marginLeft: 6 }}>
+                      <span
+                        className="critical-tag"
+                        style={{
+                          background: "var(--forest)",
+                          color: "#fff",
+                          marginLeft: 6,
+                        }}
+                      >
                         Best Value
                       </span>
                     )}
                   </td>
                   <td>{formatINR(q.baseCost)}</td>
-                  <td>{q.gstAmount === 0 ? "Included" : `+${q.gstPercent}% (${formatINR(q.gstAmount)})`}</td>
-                  <td><strong>{formatINR(q.effectiveTotal)}</strong></td>
-                  <td>{q.advancePercent}% ({formatINR(q.advanceAmount)})</td>
-                  <td style={{ color: q.isUnderBudget ? "var(--forest)" : "var(--coral)", fontWeight: 600 }}>
-                    {q.isUnderBudget ? `-${formatINR(Math.abs(q.variance))}` : `+${formatINR(q.variance)}`}
+                  <td>
+                    {q.gstAmount === 0
+                      ? "Included"
+                      : `+${q.gstPercent}% (${formatINR(q.gstAmount)})`}
+                  </td>
+                  <td>
+                    <strong>{formatINR(q.effectiveTotal)}</strong>
+                  </td>
+                  <td>
+                    {q.advancePercent}% ({formatINR(q.advanceAmount)})
+                  </td>
+                  <td
+                    style={{
+                      color: q.isUnderBudget ? "var(--forest)" : "var(--coral)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {q.isUnderBudget
+                      ? `-${formatINR(Math.abs(q.variance))}`
+                      : `+${formatINR(q.variance)}`}
                   </td>
                   <td>
                     <span style={{ fontWeight: 700, color: "var(--forest)" }}>
@@ -1293,8 +1439,18 @@ function VendorQuotesSection({
           </table>
         </div>
       )}
-      <div style={{ marginTop: 12, fontSize: 10, color: "var(--muted)", fontStyle: "italic", textAlign: "center" }}>
-        * Illustrative Kerala market rate quotations for student demonstration. In actual planning, always verify real-world contractor availability and GST compliance.
+      <div
+        style={{
+          marginTop: 12,
+          fontSize: 10,
+          color: "var(--muted)",
+          fontStyle: "italic",
+          textAlign: "center",
+        }}
+      >
+        * Illustrative Kerala market rate quotations for student demonstration.
+        In actual planning, always verify real-world contractor availability and
+        GST compliance.
       </div>
     </section>
   )
@@ -1391,7 +1547,11 @@ function Timeline({
   const [changedIndices, setChangedIndices] = useState<number[]>([])
 
   const handleDownloadMilestonesIcs = () => {
-    const icsContent = generateMilestonesIcs(tasks, undefined, "KOOTTU Celebration")
+    const icsContent = generateMilestonesIcs(
+      tasks,
+      undefined,
+      "KOOTTU Celebration",
+    )
     const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -1486,8 +1646,15 @@ function Timeline({
                   Depends on: <b>{task.dependency.replace("After ", "")}</b>
                 </p>
               )}
-              <div style={{ marginTop: 4, fontSize: 10, color: "var(--muted)" }}>
-                👤 Assigned: <b>{taskAssignees[task.id] || task.assignee || "Family Coordinator"}</b>
+              <div
+                style={{ marginTop: 4, fontSize: 10, color: "var(--muted)" }}
+              >
+                👤 Assigned:{" "}
+                <b>
+                  {taskAssignees[task.id] ||
+                    task.assignee ||
+                    "Family Coordinator"}
+                </b>
               </div>
             </div>
             <button
@@ -1518,7 +1685,11 @@ function EventDayRunSheet({
   const [items, setItems] = useState<RunSheetItem[]>(runSheet)
 
   const handleDownloadRunSheetIcs = () => {
-    const icsData = generateRunSheetIcs(items, eventDate, `${occasion || "Celebration"} Day`)
+    const icsData = generateRunSheetIcs(
+      items,
+      eventDate,
+      `${occasion || "Celebration"} Day`,
+    )
     const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -1553,23 +1724,34 @@ function EventDayRunSheet({
           className="insight-action-btn"
           onClick={handleDownloadRunSheetIcs}
           title="Download Event-Day schedule as RFC 5545 .ics file"
+          aria-label="Download Event-Day schedule as RFC 5545 .ics file"
         >
           📅 Download Day-of .ics
         </button>
       </div>
       <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 14px" }}>
-        Chronological sequence of rituals, vendor arrivals, and banquet rounds. Click any step to mark completed.
+        Chronological sequence of rituals, vendor arrivals, and banquet rounds.
+        Click any step to mark completed.
       </p>
       <div className="runsheet-timeline">
         {items.map((item) => (
           <div
             key={item.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`${item.title}, ${item.time}, owner: ${item.owner}, status: ${item.status}. Press enter or space to toggle completion.`}
             className="runsheet-item"
             style={{
               opacity: item.status === "Completed" ? 0.6 : 1,
               cursor: "pointer",
             }}
             onClick={() => toggleStatus(item.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                toggleStatus(item.id)
+              }
+            }}
           >
             <div className="runsheet-time">{item.time}</div>
             <div style={{ flex: 1 }}>
@@ -1580,7 +1762,13 @@ function EventDayRunSheet({
                 👤 {item.owner} · 📍 {item.location}
               </div>
               {item.notes && (
-                <small style={{ color: "var(--muted)", display: "block", marginTop: 2 }}>
+                <small
+                  style={{
+                    color: "var(--muted)",
+                    display: "block",
+                    marginTop: 2,
+                  }}
+                >
                   {item.notes}
                 </small>
               )}
@@ -1708,6 +1896,8 @@ function CulturalIdeasBox({
         <button
           type="button"
           className="insight-action-btn"
+          aria-expanded={open}
+          aria-controls="cultural-ideas-list"
           onClick={() => {
             if (!open) handleFetchIdeas()
             setOpen(!open)
@@ -1718,7 +1908,12 @@ function CulturalIdeasBox({
       </div>
 
       {open && (
-        <div style={{ marginTop: 10 }}>
+        <div
+          id="cultural-ideas-list"
+          role="region"
+          aria-label="Cultural celebration ideas"
+          style={{ marginTop: 10 }}
+        >
           {loading ? (
             <div style={{ fontSize: 11, color: "var(--muted)" }}>
               ✦ Consulting Gemini for Kerala cultural concepts...
@@ -1744,10 +1939,17 @@ function CulturalIdeasBox({
                         alignItems: "flex-start",
                       }}
                     >
-                      <strong style={{ color: "var(--ink)" }}>{idea.title}</strong>
+                      <strong style={{ color: "var(--ink)" }}>
+                        {idea.title}
+                      </strong>
                       <button
                         type="button"
                         className="insight-action-btn"
+                        aria-label={
+                          isSaved
+                            ? `Remove ${idea.title} from saved ideas`
+                            : `Save ${idea.title} idea`
+                        }
                         style={{
                           padding: "2px 6px",
                           fontSize: 9,
@@ -1769,7 +1971,9 @@ function CulturalIdeasBox({
                       {idea.description}
                     </p>
                     {idea.estimatedCostRange && (
-                      <small style={{ color: "var(--muted)", fontStyle: "italic" }}>
+                      <small
+                        style={{ color: "var(--muted)", fontStyle: "italic" }}
+                      >
                         Estimated Impact: {idea.estimatedCostRange}
                       </small>
                     )}
@@ -1784,11 +1988,7 @@ function CulturalIdeasBox({
   )
 }
 
-function AskAdvisorBox({
-  currentPlan,
-}: {
-  currentPlan: Plan
-}) {
+function AskAdvisorBox({ currentPlan }: { currentPlan: Plan }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(false)
@@ -1853,6 +2053,8 @@ function AskAdvisorBox({
         <button
           type="button"
           className="insight-action-btn"
+          aria-expanded={open}
+          aria-controls="advisor-panel"
           onClick={() => setOpen(!open)}
         >
           {open ? "Hide" : "Ask Question"}
@@ -1860,10 +2062,16 @@ function AskAdvisorBox({
       </div>
 
       {open && (
-        <div style={{ marginTop: 10 }}>
+        <div
+          id="advisor-panel"
+          role="region"
+          aria-label="Planning advisor answers"
+          style={{ marginTop: 10 }}
+        >
           <div style={{ display: "flex", gap: 6 }}>
             <input
               type="text"
+              aria-label="Ask KOOTTU Advisor a question"
               placeholder="e.g. What is typical advance for Kochi caterers?"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -1893,6 +2101,8 @@ function AskAdvisorBox({
           </div>
           {reply && (
             <div
+              role="status"
+              aria-live="polite"
               style={{
                 marginTop: 8,
                 background: "var(--paper2)",
@@ -2035,7 +2245,16 @@ function AdaptDrawer({
       monthsDelta: months - current.months,
       lockedKeys: activeLockedKeys,
     })
-  }, [current, budget, guests, months, activeLockedKeys, setup, changed, lockedKeys])
+  }, [
+    current,
+    budget,
+    guests,
+    months,
+    activeLockedKeys,
+    setup,
+    changed,
+    lockedKeys,
+  ])
 
   const handleApplyIntent = async () => {
     if (!intentInput.trim()) return
@@ -2214,6 +2433,7 @@ function AdaptDrawer({
             <div className="intent-input-row">
               <input
                 type="text"
+                aria-label="Express plan changes in plain English"
                 placeholder="e.g. Reduce budget by ₹50,000 and lock photography"
                 value={intentInput}
                 onChange={(e) => setIntentInput(e.target.value)}
@@ -2235,7 +2455,13 @@ function AdaptDrawer({
             </div>
           </label>
           {intentSummary && (
-            <div className="intent-result-banner">{intentSummary}</div>
+            <div
+              className="intent-result-banner"
+              role="status"
+              aria-live="polite"
+            >
+              {intentSummary}
+            </div>
           )}
         </div>
 
@@ -2691,7 +2917,10 @@ function Workspace({
     window.setTimeout(() => setPlanJustAccepted(false), 1400)
   }
 
-  const template = useMemo(() => findTemplateByOccasion(setup.occasion), [setup.occasion])
+  const template = useMemo(
+    () => findTemplateByOccasion(setup.occasion),
+    [setup.occasion],
+  )
   const runSheet = useMemo(() => template.defaultRunSheet, [template])
 
   const unifiedPlan = useMemo(() => {
@@ -2737,7 +2966,10 @@ function Workspace({
           </div>
           <div className="readiness-pill" title={readiness.summary}>
             <span>
-              Readiness: <strong className="readiness-score">{readiness.overallScore}%</strong>
+              Readiness:{" "}
+              <strong className="readiness-score">
+                {readiness.overallScore}%
+              </strong>
             </span>
           </div>
           <button
@@ -2966,11 +3198,10 @@ export default function App() {
   const [acceptedQuotes, setAcceptedQuotes] = useState<Record<string, string>>(
     () => initialLoaded?.acceptedQuotes || {},
   )
-  const [contingencyPercent, setContingencyPercent] = useState<number>(
-    () =>
-      typeof initialLoaded?.contingencyPercent === "number"
-        ? initialLoaded.contingencyPercent
-        : 5,
+  const [contingencyPercent, setContingencyPercent] = useState<number>(() =>
+    typeof initialLoaded?.contingencyPercent === "number"
+      ? initialLoaded.contingencyPercent
+      : 5,
   )
 
   // Auto-save to localStorage with versioning

@@ -26,4 +26,3 @@ test("vendorEngine: compares quote against active category budget accurately", (
   assert.equal(typeof comparison.variance, "number")
   assert.ok(comparison.recommendation.length > 10)
 })
-

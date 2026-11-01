@@ -61,7 +61,9 @@ export function compareCategoryQuotes(
     const baseCost = q.quotedAmount
     const gstPercent = q.gstRatePercent || 0
     // If GST not included, effective total includes GST
-    const gstAmount = q.gstIncluded ? 0 : Math.round((baseCost * gstPercent) / 100)
+    const gstAmount = q.gstIncluded
+      ? 0
+      : Math.round((baseCost * gstPercent) / 100)
     const effectiveTotal = baseCost + gstAmount
     const advancePercent = q.advancePaymentPercent || 0
     const advanceAmount = Math.round((effectiveTotal * advancePercent) / 100)
@@ -129,7 +131,11 @@ export function compareCategoryQuotes(
 
   let transparentReasoning = ""
   if (best) {
-    transparentReasoning = `${best.vendorName} ranks highest with an overall value score of ${best.valueScore}/100. Effective cost: ${formatINR(best.effectiveTotal)} (${best.isUnderBudget ? `${formatINR(Math.abs(best.variance))} savings` : `${formatINR(best.variance)} over budget`}).`
+    transparentReasoning = `${best.vendorName} ranks highest with an overall value score of ${best.valueScore}/100. Effective cost: ${formatINR(best.effectiveTotal)} (${
+      best.isUnderBudget
+        ? `${formatINR(Math.abs(best.variance))} savings`
+        : `${formatINR(best.variance)} over budget`
+    }).`
   }
 
   return {
@@ -167,7 +173,15 @@ Here are the key details of our event:
 • Date / Window: ${dateText}
 • Expected Guests: ${params.guestCount} pax
 • Location: ${params.location || "To be confirmed"}
-${params.budgetEstimate ? `• Target Budget Allocated: ${formatINR(params.budgetEstimate)}\n` : ""}${params.specificRequirements ? `• Key Requirements: ${params.specificRequirements}\n` : ""}
+${
+  params.budgetEstimate
+    ? `• Target Budget Allocated: ${formatINR(params.budgetEstimate)}\n`
+    : ""
+}${
+    params.specificRequirements
+      ? `• Key Requirements: ${params.specificRequirements}\n`
+      : ""
+  }
 Could you please share your availability for this date, along with your package details, GST breakdown, advance booking policy, and cancellation terms?
 
 Looking forward to hearing from you.
@@ -175,4 +189,3 @@ Looking forward to hearing from you.
 Warm regards,
 Event Coordinator & Family`
 }
-

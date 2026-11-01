@@ -165,7 +165,8 @@ export const KERALA_WEDDING_TEMPLATE: OccasionTemplate = {
       owner: "Host Family",
       location: "Auditorium Entrance & Breakfast Hall",
       status: "Pending",
-      notes: "Warm welcome with sandalwood paste, kalkandam, and hot tea/snacks.",
+      notes:
+        "Warm welcome with sandalwood paste, kalkandam, and hot tea/snacks.",
     },
     {
       id: "rs-4",
@@ -185,7 +186,8 @@ export const KERALA_WEDDING_TEMPLATE: OccasionTemplate = {
       owner: "Catering Captain",
       location: "Dining Hall",
       status: "Pending",
-      notes: "Ensure Payasam (Parippu & Palada) served hot and banana leaves clean.",
+      notes:
+        "Ensure Payasam (Parippu & Palada) served hot and banana leaves clean.",
     },
     {
       id: "rs-6",
@@ -465,19 +467,24 @@ export const OCCASION_TEMPLATES: OccasionTemplate[] = [
 ]
 
 export function getTemplateById(id: string): OccasionTemplate {
-  return (
-    OCCASION_TEMPLATES.find((t) => t.id === id) || KERALA_WEDDING_TEMPLATE
-  )
+  return OCCASION_TEMPLATES.find((t) => t.id === id) || KERALA_WEDDING_TEMPLATE
 }
 
 export function findTemplateByOccasion(occasion: string): OccasionTemplate {
   const lower = occasion.toLowerCase()
-  if (lower.includes("engage") || lower.includes("nischayam") || lower.includes("ring")) {
+  if (
+    lower.includes("engage") ||
+    lower.includes("nischayam") ||
+    lower.includes("ring")
+  ) {
     return KERALA_ENGAGEMENT_TEMPLATE
   }
-  if (lower.includes("house") || lower.includes("grihapravesham") || lower.includes("warming")) {
+  if (
+    lower.includes("house") ||
+    lower.includes("grihapravesham") ||
+    lower.includes("warming")
+  ) {
     return KERALA_HOUSEWARMING_TEMPLATE
   }
   return KERALA_WEDDING_TEMPLATE
 }
-

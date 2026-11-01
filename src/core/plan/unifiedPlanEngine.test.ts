@@ -19,7 +19,9 @@ test("unifiedPlanEngine: initializes unified plan with 5% contingency and determ
   assert.equal(food?.amount, 300000)
 
   // Verify readiness score is computed
-  assert.ok(plan.readiness.overallScore >= 0 && plan.readiness.overallScore <= 100)
+  assert.ok(
+    plan.readiness.overallScore >= 0 && plan.readiness.overallScore <= 100,
+  )
 
   // Verify proactive insights are generated
   assert.ok(Array.isArray(plan.insights))
@@ -54,4 +56,3 @@ test("unifiedPlanEngine: simulateDecisionImpact previews guest count and budget 
   assert.equal(impact.deltas.spentDelta < 0, true) // Reduced spend
   assert.ok(impact.impactExplanation.includes("45,000")) // 30 * 1500 = 45,000
 })
-

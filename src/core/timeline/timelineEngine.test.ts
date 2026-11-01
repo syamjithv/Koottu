@@ -74,4 +74,3 @@ test("timelineEngine: propagates task delays through downstream dependencies", (
   // venue-req should NOT be impacted as it does not depend on guest-est
   assert.equal(delayResult.impactedTaskIds.includes("venue-req"), false)
 })
-

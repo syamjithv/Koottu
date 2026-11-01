@@ -9,6 +9,14 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 import { GoogleGenAI } from "@google/genai"
 import * as dotenv from "dotenv"
 import type { UnifiedEventPlan } from "../core/types.ts"
+import {
+  createRateLimiter,
+  getClientIp,
+  sendJson,
+  enforcePost,
+  readJsonBody,
+  withTimeout,
+} from "./serverUtils.ts"
 
 dotenv.config()
 
@@ -17,28 +25,12 @@ export type PlanningAssistantRequest = {
   currentPlan?: Partial<UnifiedEventPlan>
 }
 
-const rateLimitMap = new Map<string, number[]>()
-const RATE_LIMIT_WINDOW_MS = 60 * 1000
-const MAX_REQUESTS_PER_WINDOW = 20
-
-function checkRateLimit(clientIp: string): boolean {
-  const now = Date.now()
-  const timestamps = rateLimitMap.get(clientIp) || []
-  const valid = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
-  if (valid.length >= MAX_REQUESTS_PER_WINDOW) {
-    rateLimitMap.set(clientIp, valid)
-    return false
-  }
-  valid.push(now)
-  rateLimitMap.set(clientIp, valid)
-  return true
-}
+const rateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 20 })
 
 export async function handlePlanningAssistantRequest(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  res.setHeader("Content-Type", "application/json")
   res.setHeader("Access-Control-Allow-Origin", "*")
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type")
@@ -49,58 +41,24 @@ export async function handlePlanningAssistantRequest(
     return
   }
 
-  if (req.method !== "POST") {
-    res.writeHead(405)
-    res.end(JSON.stringify({ error: "Method Not Allowed. Use POST." }))
+  if (!enforcePost(req, res)) return
+
+  const clientIp = getClientIp(req)
+  if (!rateLimiter.check(clientIp)) {
+    sendJson(res, 429, {
+      error: "Too Many Requests: rate limit exceeded. Please wait a minute.",
+    })
     return
   }
 
-  const clientIp =
-    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
-    req.socket.remoteAddress ||
-    "127.0.0.1"
+  const payload = await readJsonBody<PlanningAssistantRequest>(req, res)
+  if (!payload) return
 
-  if (!checkRateLimit(clientIp)) {
-    res.writeHead(429)
-    res.end(
-      JSON.stringify({
-        error: "Too Many Requests: rate limit exceeded. Please wait a minute.",
-      }),
-    )
-    return
-  }
-
-  let body = ""
-  const MAX_BODY_BYTES = 10 * 1024
-
-  try {
-    for await (const chunk of req) {
-      if (body.length + chunk.length > MAX_BODY_BYTES) {
-        res.writeHead(413)
-        res.end(JSON.stringify({ error: "Payload Too Large: maximum allowed body is 10KB." }))
-        return
-      }
-      body += chunk
-    }
-  } catch {
-    res.writeHead(400)
-    res.end(JSON.stringify({ error: "Failed to read request body." }))
-    return
-  }
-
-  let payload: PlanningAssistantRequest
-  try {
-    payload = JSON.parse(body || "{}")
-  } catch {
-    res.writeHead(400)
-    res.end(JSON.stringify({ error: "Invalid JSON payload." }))
-    return
-  }
-
-  const userQuery = String(payload.message || "").trim().slice(0, 500)
+  const userQuery = String(payload.message || "")
+    .trim()
+    .slice(0, 500)
   if (!userQuery) {
-    res.writeHead(422)
-    res.end(JSON.stringify({ error: "Query message cannot be empty." }))
+    sendJson(res, 422, { error: "Query message cannot be empty." })
     return
   }
 
@@ -108,95 +66,143 @@ export async function handlePlanningAssistantRequest(
   const budget = plan?.financials?.totalBudget || 800000
   const guests = plan?.identity?.guests || 200
   const months = plan?.identity?.months || 4
-  const deficit = plan?.financials?.isDeficit ? plan?.financials?.deficitAmount : 0
-  const occasion = plan?.identity?.occasion || "Kerala Celebration"
+  const deficit =
+    (plan?.financials?.isDeficit ? plan?.financials?.deficitAmount : 0) || 0
+  const readiness = plan?.readiness?.overallScore || 70
 
-  const deterministicFallbackReply = `Regarding "${userQuery}":
-In your current ${occasion} plan, you have ₹${budget.toLocaleString("en-IN")} allocated for ${guests} guests over a ${months}-month window${deficit ? `, with an active deficit of ₹${deficit.toLocaleString("en-IN")}` : ""}.
-Key guidance:
-• Protect the primary hospitality priorities (authentic food catering is budgeted at ₹1,500/guest).
-• Ensure auditorium or mandapam booking is confirmed first, as other vendor site-visits depend on it.
-• Keep all vendor commitments transparent with written GST and cancellation terms.`
+  const apiKey = process.env.GEMINI_API_KEY
+  const modelName = process.env.GEMINI_MODEL || "gemini-3.8-flash"
 
-  const apiKey = process.env.GEMINI_API_KEY?.trim()
-  const modelName = process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash"
-
-  if (!apiKey) {
-    res.writeHead(200)
-    res.end(
-      JSON.stringify({
-        status: "fallback",
-        isAiGenerated: false,
-        reply: deterministicFallbackReply,
-      }),
-    )
+  // 1. If Gemini is unavailable, use verified grounded cultural fallback
+  if (!apiKey || apiKey.trim() === "") {
+    const fallbackAdvice = generateGroundedFallbackAdvice(userQuery, {
+      budget,
+      guests,
+      months,
+      deficit,
+      readiness,
+    })
+    sendJson(res, 200, {
+      status: "fallback",
+      isAiGenerated: false,
+      reply: fallbackAdvice,
+      advice: fallbackAdvice,
+      source: "fallback",
+      grounding: { budget, guests, months, deficit, readiness },
+    })
     return
   }
 
+  // 2. Call Google Gemini with strict plan grounding
   try {
     const ai = new GoogleGenAI({ apiKey })
+    const prompt = `You are KOOTTU's AI Celebration Advisor, an expert Kerala wedding and family event planner.
+You must answer the user's question accurately, thoughtfully, and culturally appropriately for Kerala/South Indian traditions.
 
-    const systemPrompt = `You are KOOTTU's grounded celebration planning expert.
-The user will ask advice about their event.
-CRITICAL INSTRUCTIONS:
-1. All figures given in context are verified ground truth. NEVER invent different budgets, deficits, or vendor availability.
-2. Ground your advice in Kerala celebration customs, family coordination realities, and calm trade-offs.
-3. Be concise (2-4 clear paragraphs or bullet points). No fluff or generic filler.`
-
-    const contextPrompt = `Current Authoritative Event Plan Context:
-- Occasion: ${occasion}
-- Total Budget: ₹${budget.toLocaleString("en-IN")}
-- Expected Guests: ${guests} pax
-- Planning Window: ${months} months
-- Financial Balance: ${deficit ? `Deficit of ₹${deficit.toLocaleString("en-IN")}` : "Balanced"}
-- Key Categories: ${plan?.categories?.map((c) => `${c.name}: ₹${c.amount.toLocaleString("en-IN")}`).join(", ") || "Standard"}
-
-User Question: "${userQuery}"`
-
-    const callPromise = ai.models.generateContent({
-      model: modelName,
-      contents: contextPrompt,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.3,
-        maxOutputTokens: 1500,
-        thinkingConfig: { thinkingBudget: 0 },
-      },
-    })
-
-    let timer: NodeJS.Timeout | undefined
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error("Assistant call timed out after 120s")), 120000)
-      timer.unref()
-    })
-
-    let response
-    try {
-      response = await Promise.race([callPromise, timeoutPromise])
-    } finally {
-      if (timer) clearTimeout(timer)
+CRITICAL INSTRUCTION: You must strictly respect the family's ACTIVE EVENT PLAN:
+- Budget: ₹${budget.toLocaleString("en-IN")}
+- Headcount: ${guests} guests
+- Planning Horizon: ${months} months
+- Baseline Deficit: ${
+      deficit !== 0 ? `₹${deficit.toLocaleString("en-IN")}` : "Balanced (₹0)"
     }
-    const replyText = response.text?.trim() || deterministicFallbackReply
+- Current Readiness Score: ${readiness}/100
 
-    res.writeHead(200)
-    res.end(
-      JSON.stringify({
-        status: "success",
-        isAiGenerated: true,
-        reply: replyText,
+User Question: "${userQuery}"
+
+Provide 2-3 focused, practical, encouraging paragraphs tailored to Kerala celebrations.
+Mention specific Kerala customs where appropriate (e.g. Muhurtham timing, Sadya per-plate guarantees, Kasavu attire sourcing, monsoon Shamiana requirements).
+Never contradict the numbers in their active event plan. Output clean plain text (no markdown headings).`
+
+    const controller = new AbortController()
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: modelName,
+        contents: prompt,
+        config: {
+          abortSignal: controller.signal,
+        },
       }),
+      undefined,
+      "Assistant call timed out",
+      controller,
     )
+
+    const text = response.text?.trim()
+    if (!text) {
+      throw new Error("Empty response text from Gemini API")
+    }
+
+    sendJson(res, 200, {
+      status: "success",
+      isAiGenerated: true,
+      reply: text,
+      advice: text,
+      source: "gemini",
+      grounding: { budget, guests, months, deficit, readiness },
+    })
   } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : "Unknown AI error"
-    console.error("[KOOTTU Assistant Service Error]:", errorMsg)
-    res.writeHead(200)
-    res.end(
-      JSON.stringify({
-        status: "fallback",
-        isAiGenerated: false,
-        reply: deterministicFallbackReply,
-        note: "Fallback response returned due to API error or quota exhaustion.",
-      }),
-    )
+    const errMessage = err instanceof Error ? err.message : String(err)
+    console.error("[KOOTTU Assistant Service Error]:", errMessage)
+    const fallbackAdvice = generateGroundedFallbackAdvice(userQuery, {
+      budget,
+      guests,
+      months,
+      deficit,
+      readiness,
+    })
+    sendJson(res, 200, {
+      status: "fallback",
+      isAiGenerated: false,
+      reply: fallbackAdvice,
+      advice: fallbackAdvice,
+      source: "fallback",
+      fallbackReason: errMessage.includes("timeout") ? "timeout" : "api_error",
+      grounding: { budget, guests, months, deficit, readiness },
+    })
   }
+}
+
+function generateGroundedFallbackAdvice(
+  query: string,
+  ctx: {
+    budget: number
+    guests: number
+    months: number
+    deficit: number
+    readiness: number
+  },
+): string {
+  const q = query.toLowerCase()
+
+  if (q.includes("rain") || q.includes("monsoon") || q.includes("weather")) {
+    return `For outdoor or semi-outdoor celebrations in Kerala, monsoon planning requires prioritizing waterproof shamiana canopies with side-wall curtains and industrial generator backups for uninterrupted AC. With your active plan of ${ctx.guests} guests, allocate at least ₹25,000–₹35,000 in your contingency reserve to guarantee dry covered transit between the Mandapam and dining area.`
+  }
+
+  if (q.includes("photo") || q.includes("album") || q.includes("camera")) {
+    return `In Kerala, prime wedding dates see rapid booking of reputed photography teams across Kochi, Calicut, and Kottayam. For your ${ctx.months}-month timeline, we strongly recommend locking your photography contract within the next 2 weeks. Make sure your contract specifies coverage hours (typically 8–10 hours), drone footage permits, and delivery dates for both teaser reels and traditional flush-mount leatherette photo books.`
+  }
+
+  if (
+    q.includes("sadya") ||
+    q.includes("cater") ||
+    q.includes("food") ||
+    q.includes("menu")
+  ) {
+    return `A traditional 28-dish Kerala Sadya served on fresh plantain leaves is the culinary heart of your celebration. Based on your active plan for ${ctx.guests} guests, ensure a minimum plate guarantee of 200–220 leaves with your caterer, including 3 varieties of payasam (Ada Pradhaman, Paal Payasam, and Parippu). Coordinate serving batches with your venue's hall turnover capacity.`
+  }
+
+  if (
+    q.includes("budget") ||
+    q.includes("money") ||
+    q.includes("cost") ||
+    q.includes("deficit")
+  ) {
+    if (ctx.deficit > 0) {
+      return `Your current celebration plan reflects an active deficit of ₹${ctx.deficit.toLocaleString("en-IN")} against your ₹${ctx.budget.toLocaleString("en-IN")} budget. We recommend using KOOTTU's Adapt Drawer to preview trade-off scenarios—such as rebalancing flexible decor minimums or slightly adjusting guest counts—to bring your budget into 100% balance without sacrificing food or photography quality.`
+    }
+    return `Your ₹${ctx.budget.toLocaleString("en-IN")} celebration budget is currently fully balanced with a strong readiness score of ${ctx.readiness}/100. We recommend keeping your 5% contingency cushion active to absorb unexpected local expenses such as generator diesel, overtime charges, or welcome gifts.`
+  }
+
+  return `For your ${ctx.guests}-guest Kerala celebration scheduled over ${ctx.months} months, we recommend focusing on your critical path milestones: venue contract confirmation, Sadya catering plate guarantees, and photography booking. Maintaining your ${ctx.readiness}/100 readiness score will ensure your family experiences a relaxed, auspicious celebration day.`
 }

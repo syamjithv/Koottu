@@ -1,6 +1,9 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { compareCategoryQuotes, generateVendorInquiryDraft } from "./vendorLifecycleEngine.ts"
+import {
+  compareCategoryQuotes,
+  generateVendorInquiryDraft,
+} from "./vendorLifecycleEngine.ts"
 import type { VendorQuote } from "../types.ts"
 
 test("vendorLifecycleEngine: transparently ranks quotes by value score considering GST and advance", () => {
@@ -30,7 +33,11 @@ test("vendorLifecycleEngine: transparently ranks quotes by value score consideri
     advanceAmount: 82500,
     cancellationPolicy: "Full refund up to 30 days prior",
     riskFlags: [],
-    includedServices: ["Sadya 28 items", "Payasam counter", "Banana leaf setup"],
+    includedServices: [
+      "Sadya 28 items",
+      "Payasam counter",
+      "Banana leaf setup",
+    ],
     status: "reviewed",
   }
 
@@ -60,4 +67,3 @@ test("vendorLifecycleEngine: generates respectful Kerala vendor inquiry draft", 
   assert.ok(draft.includes("200 pax"))
   assert.ok(draft.includes("₹85,000"))
 })
-

@@ -17,7 +17,10 @@ function createMockReq(method: string, bodyObj?: any): IncomingMessage {
   return req as IncomingMessage
 }
 
-function createMockRes(): { res: ServerResponse; getOutput: () => { statusCode: number; body: any } } {
+function createMockRes(): {
+  res: ServerResponse
+  getOutput: () => { statusCode: number; body: any }
+} {
   let statusCode = 200
   let resBody = ""
   const res = {

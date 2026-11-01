@@ -1,6 +1,9 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { createInitialUnifiedPlan, recalculateUnifiedPlan } from "../plan/unifiedPlanEngine.ts"
+import {
+  createInitialUnifiedPlan,
+  recalculateUnifiedPlan,
+} from "../plan/unifiedPlanEngine.ts"
 import { generateProactiveInsights } from "./insightEngine.ts"
 import { DEFAULT_SETUP } from "../persistence/storage.ts"
 
@@ -25,4 +28,3 @@ test("insightEngine: flags unconfirmed core vendors (venue, food, photo)", () =>
   assert.ok(insights.some((i) => i.id === "insight-vendor-unconfirmed-venue"))
   assert.ok(insights.some((i) => i.id === "insight-vendor-unconfirmed-food"))
 })
-

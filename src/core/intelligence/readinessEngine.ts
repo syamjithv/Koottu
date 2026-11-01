@@ -24,7 +24,8 @@ export function calculateCelebrationReadiness(
   // Pillar 1: Budget Health (0–25 points)
   let budgetScore = 25
   if (financials.isDeficit) {
-    const deficitRatio = financials.deficitAmount / Math.max(1, financials.totalBudget)
+    const deficitRatio =
+      financials.deficitAmount / Math.max(1, financials.totalBudget)
     const deduction = Math.min(25, Math.max(5, Math.round(deficitRatio * 100)))
     budgetScore = Math.max(0, 25 - deduction)
     reasons.push(
@@ -32,26 +33,38 @@ export function calculateCelebrationReadiness(
     )
   } else if (financials.contingencyReserve <= 0) {
     budgetScore = 20
-    reasons.push("Budget: 20/25 pts. Balanced, but lacks a contingency reserve buffer.")
+    reasons.push(
+      "Budget: 20/25 pts. Balanced, but lacks a contingency reserve buffer.",
+    )
   } else {
     budgetScore = 25
-    reasons.push("Budget: 25/25 pts. Allocations reconcile with contingency cushion.")
+    reasons.push(
+      "Budget: 25/25 pts. Allocations reconcile with contingency cushion.",
+    )
   }
 
   // Pillar 2: Timeline Feasibility & Slack (0–25 points)
   let timelineScore = 25
   if (!timeline.isFeasible) {
     timelineScore = 0
-    reasons.push("Timeline: 0/25 pts. Sequential critical path exceeds remaining planning window.")
+    reasons.push(
+      "Timeline: 0/25 pts. Sequential critical path exceeds remaining planning window.",
+    )
   } else if (timeline.slackDays >= 30) {
     timelineScore = 25
-    reasons.push(`Timeline: 25/25 pts. Robust feasibility with +${timeline.slackDays} days buffer.`)
+    reasons.push(
+      `Timeline: 25/25 pts. Robust feasibility with +${timeline.slackDays} days buffer.`,
+    )
   } else if (timeline.slackDays >= 15) {
     timelineScore = 18
-    reasons.push(`Timeline: 18/25 pts. Feasible with moderate slack (+${timeline.slackDays} days).`)
+    reasons.push(
+      `Timeline: 18/25 pts. Feasible with moderate slack (+${timeline.slackDays} days).`,
+    )
   } else {
     timelineScore = 10
-    reasons.push(`Timeline: 10/25 pts. Tight critical path (+${timeline.slackDays} days slack).`)
+    reasons.push(
+      `Timeline: 10/25 pts. Tight critical path (+${timeline.slackDays} days slack).`,
+    )
   }
 
   // Pillar 3: Vendor Confirmations (0–25 points)
@@ -66,7 +79,9 @@ export function calculateCelebrationReadiness(
   if (photoConfirmed) vendorScore += 7
 
   if (vendorScore === 25) {
-    reasons.push("Vendors: 25/25 pts. All core cultural categories (Venue, Food, Photo) confirmed.")
+    reasons.push(
+      "Vendors: 25/25 pts. All core cultural categories (Venue, Food, Photo) confirmed.",
+    )
   } else {
     const missing: string[] = []
     if (!venueConfirmed) missing.push("Venue")
@@ -81,8 +96,11 @@ export function calculateCelebrationReadiness(
   let taskScore = 0
   if (tasks.length > 0) {
     const completedCount = tasks.filter((t) => t.status === "Completed").length
-    const inProgressCount = tasks.filter((t) => t.status === "In progress").length
-    const rawRatio = (completedCount * 1.0 + inProgressCount * 0.5) / tasks.length
+    const inProgressCount = tasks.filter(
+      (t) => t.status === "In progress",
+    ).length
+    const rawRatio =
+      (completedCount * 1.0 + inProgressCount * 0.5) / tasks.length
     taskScore = Math.round(rawRatio * 25)
     reasons.push(
       `Tasks: ${taskScore}/25 pts (${completedCount} completed, ${inProgressCount} in progress of ${tasks.length} total).`,
@@ -93,21 +111,29 @@ export function calculateCelebrationReadiness(
   let riskDeductions = 0
   if (timeline.cycleDetected) {
     riskDeductions -= 15
-    reasons.push("Risk: -15 pts for circular task dependencies in timeline DAG.")
+    reasons.push(
+      "Risk: -15 pts for circular task dependencies in timeline DAG.",
+    )
   }
 
   const overallScore = Math.max(
     0,
-    Math.min(100, budgetScore + timelineScore + vendorScore + taskScore + riskDeductions),
+    Math.min(
+      100,
+      budgetScore + timelineScore + vendorScore + taskScore + riskDeductions,
+    ),
   )
 
   let summary = ""
   if (overallScore >= 80) {
-    summary = "High Celebration Readiness. Core commitments and scheduling are securely in place."
+    summary =
+      "High Celebration Readiness. Core commitments and scheduling are securely in place."
   } else if (overallScore >= 55) {
-    summary = "Moderate Readiness. Key decisions remain open (budget trade-offs or vendor confirmations)."
+    summary =
+      "Moderate Readiness. Key decisions remain open (budget trade-offs or vendor confirmations)."
   } else {
-    summary = "Early / Constrained Stage. Crucial financial or venue commitments require resolution."
+    summary =
+      "Early / Constrained Stage. Crucial financial or venue commitments require resolution."
   }
 
   return {
@@ -121,4 +147,3 @@ export function calculateCelebrationReadiness(
     summary,
   }
 }
-

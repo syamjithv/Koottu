@@ -45,7 +45,7 @@ export type ScheduledTask = {
   title: string
   category: CategoryKey | "general"
   due: string
-  dueDaysBeforeEvent: number // Days relative to event date (0 = event day)
+  dueDaysBeforeEvent?: number // Days relative to event date (0 = event day)
   durationDays: number
   status: TaskStatus
   dependsOn: string[] // Task IDs that must finish before this begins
@@ -103,7 +103,7 @@ export type ProactiveInsightSeverity = "critical" | "warning" | "info" | "succes
 export type ProactiveInsight = {
   id: string
   severity: ProactiveInsightSeverity
-  category: "budget" | "timeline" | "vendor" | "task" | "cultural"
+  category: "budget" | "timeline" | "vendor" | "task" | "cultural" | "general"
   title: string
   explanation: string
   evidence?: string
@@ -143,14 +143,7 @@ export type StressTestScenario = {
 
 // --- Vendor Management Domain ---
 
-export type VendorStatus =
-  | "not_started"
-  | "shortlisted"
-  | "contacted"
-  | "quote_received"
-  | "negotiating"
-  | "accepted"
-  | "declined"
+export type VendorStatus = "not_started" | "shortlisted" | "contacted" | "quote_received" | "negotiating" | "accepted" | "declined"
 
 export type UnifiedVendor = {
   id: string
@@ -218,6 +211,7 @@ export type VendorQuoteComparison = {
 export type PlanIntent = {
   recognized: boolean
   summary: string
+  rawMessage?: string
   budgetDelta?: number
   guestDelta?: number
   monthsDelta?: number

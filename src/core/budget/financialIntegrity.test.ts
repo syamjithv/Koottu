@@ -21,9 +21,17 @@ test("financialIntegrity: integer INR calculations avoid float penny drift", () 
     for (let g = 50; g <= 300; g += 50) {
       const plan = adaptPlan(b, g, 4)
       const total = sumPlan(plan)
-      assert.equal(Number.isInteger(total), true, `Total must be integer for budget ${b}, guests ${g}`)
+      assert.equal(
+        Number.isInteger(total),
+        true,
+        `Total must be integer for budget ${b}, guests ${g}`,
+      )
       plan.categories.forEach((cat) => {
-        assert.equal(Number.isInteger(cat.amount), true, `Category ${cat.key} must be integer`)
+        assert.equal(
+          Number.isInteger(cat.amount),
+          true,
+          `Category ${cat.key} must be integer`,
+        )
       })
     }
   }
@@ -72,7 +80,12 @@ test("financialIntegrity: contingency reserve calculation and non-double-countin
 
   // Net requirement = totalAllocated + contingencyReserve = 692000 + 32000 = 724000
   // Total deficit = 724000 - 640000 = 84000
-  assert.equal(uPlan.financials.totalAllocated + uPlan.financials.contingencyReserve - budget, 84000)
+  assert.equal(
+    uPlan.financials.totalAllocated +
+      uPlan.financials.contingencyReserve -
+      budget,
+    84000,
+  )
 })
 
 test("financialIntegrity: boundary cases (zero, sub-minimum, large, and extreme inputs)", () => {
@@ -105,14 +118,25 @@ test("financialIntegrity: category locks strictly protect allocations", () => {
   scenarios.forEach((sc) => {
     const scPhoto = sc.proposedPlan.categories.find((c) => c.key === "photo")
     const scVenue = sc.proposedPlan.categories.find((c) => c.key === "venue")
-    assert.equal(scPhoto?.amount, photo?.amount, `Locked photo allocation changed in ${sc.id}`)
-    assert.equal(scVenue?.amount, venue?.amount, `Locked venue allocation changed in ${sc.id}`)
+    assert.equal(
+      scPhoto?.amount,
+      photo?.amount,
+      `Locked photo allocation changed in ${sc.id}`,
+    )
+    assert.equal(
+      scVenue?.amount,
+      venue?.amount,
+      `Locked venue allocation changed in ${sc.id}`,
+    )
   })
 })
 
 test("financialIntegrity: vendor quotation GST and effective total calculation", () => {
   // Case A: GST Exclusive (18% extra)
-  const quoteA = parseVendorQuote("Total cost is ₹3,00,000 plus 18% GST with 40% advance", "food")
+  const quoteA = parseVendorQuote(
+    "Total cost is ₹3,00,000 plus 18% GST with 40% advance",
+    "food",
+  )
   assert.equal(quoteA.quotedAmount, 300000)
   assert.equal(quoteA.gstIncluded, false)
   assert.equal(quoteA.gstRatePercent, 18)
@@ -121,7 +145,10 @@ test("financialIntegrity: vendor quotation GST and effective total calculation",
   assert.equal(quoteA.advanceAmount, 141600) // 40% of effective gross total including GST (354,000)
 
   // Case B: GST Inclusive
-  const quoteB = parseVendorQuote("Inclusive of all taxes: ₹3,50,000 total with 25% token", "food")
+  const quoteB = parseVendorQuote(
+    "Inclusive of all taxes: ₹3,50,000 total with 25% token",
+    "food",
+  )
   assert.equal(quoteB.quotedAmount, 350000)
   assert.equal(quoteB.gstIncluded, true)
   assert.equal(quoteB.advanceAmount, 87500) // 25% of 350,000
@@ -150,4 +177,3 @@ test("financialIntegrity: 3-scenario trade-off reconciliation", () => {
   assert.equal(scC.remainingDeficit, 0)
   assert.equal(sumPlan(scC.proposedPlan), 640000)
 })
-

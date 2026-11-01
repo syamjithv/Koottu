@@ -75,7 +75,9 @@ export function loadStoredAppState(): StoredAppState | null {
       plan: parsed.plan,
       accepted: Boolean(parsed.accepted),
       lockedKeys: Array.isArray(parsed.lockedKeys) ? parsed.lockedKeys : [],
-      vendorQuotes: Array.isArray(parsed.vendorQuotes) ? parsed.vendorQuotes : [],
+      vendorQuotes: Array.isArray(parsed.vendorQuotes)
+        ? parsed.vendorQuotes
+        : [],
       customTaskStatuses: parsed.customTaskStatuses || {},
       history: Array.isArray(parsed.history) ? parsed.history : [],
       taskAssignees: parsed.taskAssignees || {},
@@ -162,7 +164,9 @@ export function importPlanJSON(jsonStr: string): StoredAppState | null {
 /**
  * Generate a clean, structured printable celebration summary for elders and coordinators
  */
-export function generatePrintableCelebrationSummary(state: StoredAppState): string {
+export function generatePrintableCelebrationSummary(
+  state: StoredAppState,
+): string {
   const s = state.setup
   const p = state.plan
   const totalAllocated = p.categories.reduce((acc, c) => acc + c.amount, 0)
@@ -180,7 +184,11 @@ EVENT OVERVIEW
 • Expected Attendance: ${s.guests} guests
 • Total Available Budget: ₹${s.budget.toLocaleString("en-IN")}
 • Total Planned Allocations: ₹${totalAllocated.toLocaleString("en-IN")}
-• Net Financial Balance: ${balance < 0 ? `Deficit of ₹${Math.abs(balance).toLocaleString("en-IN")} (Requires Trade-Off)` : `Cushion of ₹${balance.toLocaleString("en-IN")}`}
+• Net Financial Balance: ${
+    balance < 0
+      ? `Deficit of ₹${Math.abs(balance).toLocaleString("en-IN")} (Requires Trade-Off)`
+      : `Cushion of ₹${balance.toLocaleString("en-IN")}`
+  }
 
 PROTECTED PRIORITIES & REQUIREMENTS
 • Priorities: ${s.priorities.join(", ") || "Hospitality & Traditional Feast"}
@@ -190,7 +198,9 @@ FINANCIAL ALLOCATION BREAKDOWN
 ${p.categories
   .map(
     (c) =>
-      `• ${c.name.padEnd(24, " ")}: ₹${c.amount.toLocaleString("en-IN")}${c.locked ? " [LOCKED]" : ""}${c.priority ? " [PROTECTED]" : ""}`,
+      `• ${c.name.padEnd(24, " ")}: ₹${c.amount.toLocaleString("en-IN")}${
+        c.locked ? " [LOCKED]" : ""
+      }${c.priority ? " [PROTECTED]" : ""}`,
   )
   .join("\n")}
 
@@ -200,19 +210,23 @@ ${
     ? state.vendorQuotes
         .map(
           (q) =>
-            `• ${q.category.toUpperCase().padEnd(10, " ")} | ${q.vendorName} | Quoted: ₹${q.quotedAmount.toLocaleString("en-IN")} (${q.gstIncluded ? "GST Included" : `+${q.gstRatePercent}% GST`}) | Status: ${q.status.toUpperCase()}`,
+            `• ${q.category.toUpperCase().padEnd(10, " ")} | ${q.vendorName} | Quoted: ₹${q.quotedAmount.toLocaleString("en-IN")} (${
+              q.gstIncluded ? "GST Included" : `+${q.gstRatePercent}% GST`
+            }) | Status: ${q.status.toUpperCase()}`,
         )
         .join("\n")
     : "• No external vendor quotations registered yet."
 }
 
 KEY TIMELINE MILESTONES
-${Object.entries(state.customTaskStatuses)
-  .map(([taskId, status]) => `• ${taskId}: ${status}`)
-  .join("\n") || "• Timeline tasks in progress according to CPM Critical Path."}
+${
+  Object.entries(state.customTaskStatuses)
+    .map(([taskId, status]) => `• ${taskId}: ${status}`)
+    .join("\n") ||
+  "• Timeline tasks in progress according to CPM Critical Path."
+}
 
 =====================================================================
 KOOTTU • Make room for what matters • Deterministic Event Intelligence
 =====================================================================`
 }
-

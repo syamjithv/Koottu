@@ -18,7 +18,9 @@ function createMockHttp(
   ;(req as any).method = method
   ;(req as any).url = "/api/vendor-quote"
   ;(req as any).headers = { "content-type": "application/json", ...headers }
-  ;(req as any).socket = { remoteAddress: `127.0.0.${Math.floor(Math.random() * 250)}` }
+  ;(req as any).socket = {
+    remoteAddress: `127.0.0.${Math.floor(Math.random() * 250)}`,
+  }
   ;(req as any)[Symbol.asyncIterator] = async function* () {
     yield Buffer.from(body)
   }
@@ -89,7 +91,8 @@ test("handleVendorQuoteRequest: rejects non-POST method with HTTP 405", async ()
 
 test("handleVendorQuoteRequest: processes valid quotation text and returns HTTP 200", async () => {
   const payload = JSON.stringify({
-    rawText: "M/s Malabar Sadya Caterers\nTraditional Kerala Feast (230 guests)\nTotal: ₹3,50,000\nAdvance: 40% on booking",
+    rawText:
+      "M/s Malabar Sadya Caterers\nTraditional Kerala Feast (230 guests)\nTotal: ₹3,50,000\nAdvance: 40% on booking",
     categoryHint: "food",
     currentPlan: { budget: 640000, guests: 230, months: 4 },
   })

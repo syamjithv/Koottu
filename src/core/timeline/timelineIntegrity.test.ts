@@ -118,7 +118,11 @@ test("timelineIntegrity: event-day run sheet chronological ordering", () => {
 
 test("timelineIntegrity: RFC 5545 iCalendar UTC date and timezone formatting", () => {
   const tasks = getTimeline(4)
-  const icsContent = generateMilestonesIcs(tasks, "2026-12-15", "Kerala Wedding")
+  const icsContent = generateMilestonesIcs(
+    tasks,
+    "2026-12-15",
+    "Kerala Wedding",
+  )
 
   // Must have standard RFC 5545 envelope
   assert.ok(icsContent.includes("BEGIN:VCALENDAR"))
@@ -134,7 +138,10 @@ test("timelineIntegrity: RFC 5545 iCalendar UTC date and timezone formatting", (
   assert.ok(icsContent.includes("END:VEVENT"))
 
   // Run sheet .ics check
-  const runSheetIcs = generateRunSheetIcs(KERALA_WEDDING_TEMPLATE.defaultRunSheet, "2026-12-15")
+  const runSheetIcs = generateRunSheetIcs(
+    KERALA_WEDDING_TEMPLATE.defaultRunSheet,
+    "2026-12-15",
+  )
   assert.ok(runSheetIcs.includes("BEGIN:VCALENDAR"))
   assert.ok(runSheetIcs.includes("Muhurtham"))
   assert.ok(runSheetIcs.includes("END:VCALENDAR"))

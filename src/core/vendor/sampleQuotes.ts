@@ -4,10 +4,44 @@
  * the quotation analysis engine without needing manual typing.
  */
 
-export const SAMPLE_QUOTES = [
+import type { CategoryKey } from "../types.ts"
+
+export interface SampleVendorQuote {
+  title: string
+  vendorName: string
+  category: CategoryKey
+  baseCost: number
+  gstPercent: number
+  gstIncluded: boolean
+  advancePercent: number
+  cancellationPolicy: string
+  includedServices: string[]
+  riskFlags: string[]
+  rawText: string
+}
+
+export const SAMPLE_QUOTES: SampleVendorQuote[] = [
   {
     title: "Malabar Grand Sadya Caterers (Kochi)",
-    category: "food" as const,
+    vendorName: "Malabar Grand Sadya Caterers, Ernakulam",
+    category: "food",
+    baseCost: 333500,
+    gstPercent: 5,
+    gstIncluded: false,
+    advancePercent: 40,
+    cancellationPolicy:
+      "Advance non-refundable if cancelled within 21 days of event",
+    includedServices: [
+      "28-dish traditional Kerala sadya on fresh plantain leaves",
+      "3 varieties of payasam (Ada Pradhaman, Paal Payasam, Parippu)",
+      "High-grade Kerala matta rice & ghee parippu service",
+      "14 professional serving staff in traditional mundu attire",
+      "Premium drinking water, disposable cups & waste clearing team",
+    ],
+    riskFlags: [
+      "Advance payment is strictly non-refundable upon cancellation",
+      "Minimum billable count is 200 plates",
+    ],
     rawText: `M/s. Malabar Grand Sadya Caterers, Ernakulam
 Quotation for Traditional Kerala Wedding Feast (230 Guests)
 
@@ -33,7 +67,25 @@ Plate guarantee: Minimum billable count is 200 plates.`,
   },
   {
     title: "Lumière Kochi Visual Studios (Photography)",
-    category: "photo" as const,
+    vendorName: "Lumière Visual Studios, Panampilly Nagar, Kochi",
+    category: "photo",
+    baseCost: 85000,
+    gstPercent: 18,
+    gstIncluded: true,
+    advancePercent: 50,
+    cancellationPolicy:
+      "Token non-refundable after date lock. Reschedule allowed subject to date availability",
+    includedServices: [
+      "2 Candid Photographers + 2 Traditional Photographers",
+      "1 Senior Cinematographer with 4K Drone Aerial Coverage",
+      "Premium 40-page flush-mount leatherette photo book",
+      "3-5 minute cinematic celebration teaser + 45-minute full film",
+      "Same-day highlight reel for social sharing",
+    ],
+    riskFlags: [
+      "Token non-refundable after date lock",
+      "Overtime beyond 8 hours charged at ₹4,000 per hour",
+    ],
     rawText: `Lumière Visual Studios, Panampilly Nagar, Kochi
 Wedding Photography & Cinematic Film Quotation
 
@@ -57,7 +109,23 @@ Cancellation: Token non-refundable after date lock. Reschedule allowed subject t
   },
   {
     title: "Aura Floral & Mandap Decorators (Aluva)",
-    category: "decor" as const,
+    vendorName: "Aura Wedding Concepts & Floral Decor, Aluva, Kochi",
+    category: "decor",
+    baseCost: 32000,
+    gstPercent: 18,
+    gstIncluded: false,
+    advancePercent: 50,
+    cancellationPolicy: "Non-refundable token",
+    includedServices: [
+      "Traditional marigold & jasmine floral mandap backdrop",
+      "Traditional nilavilakku brass lamps (8 units) with floral arrangements",
+      "Welcome entrance walkway arch with fresh Kerala greenery",
+      "Stage seating sofa for bride & groom with backdrop lighting",
+    ],
+    riskFlags: [
+      "Non-refundable token",
+      "Generator diesel charges are client responsibility if hall power is inadequate",
+    ],
     rawText: `Aura Wedding Concepts & Floral Decor, Aluva, Kochi
 Quotation for Traditional Floral Mandap & Entry Arch
 
@@ -74,4 +142,3 @@ Token Advance: 50% (₹18,880) to secure florists.
 Terms: Generator diesel charges are client responsibility if hall power is inadequate. Non-refundable token.`,
   },
 ]
-

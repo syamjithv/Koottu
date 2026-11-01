@@ -35,7 +35,11 @@ async function validateMermaidDiagrams() {
   ].join("\n")
 
   await page.setContent(html)
-  await page.waitForFunction(() => typeof window.mermaid !== "undefined" && typeof window.mermaid.parse === "function")
+  await page.waitForFunction(
+    () =>
+      typeof window.mermaid !== "undefined" &&
+      typeof window.mermaid.parse === "function",
+  )
 
   let allPassed = true
 
@@ -68,7 +72,9 @@ async function validateMermaidDiagrams() {
     console.error("❌ One or more Mermaid diagrams failed validation.")
     process.exit(1)
   } else {
-    console.log(`✅ All ${diagrams.length} Mermaid diagrams in README.md are 100% valid!`)
+    console.log(
+      `✅ All ${diagrams.length} Mermaid diagrams in README.md are 100% valid!`,
+    )
   }
 }
 

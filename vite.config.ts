@@ -29,6 +29,10 @@ export default defineConfig(({ mode }) => {
       minify: !emitSourcemaps,
     },
 
+    define: {
+      __BUNDLED_DEV__: false,
+    },
+
     plugins: [
       react(),
 

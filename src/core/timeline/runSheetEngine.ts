@@ -29,11 +29,7 @@ function toIcsTimestamp(d: Date): string {
  */
 function toIcsDateOnly(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0")
-  return (
-    d.getFullYear() +
-    pad(d.getMonth() + 1) +
-    pad(d.getDate())
-  )
+  return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate())
 }
 
 /**
@@ -46,7 +42,9 @@ export function generateMilestonesIcs(
 ): string {
   const now = new Date()
   const nowIcs = toIcsTimestamp(now)
-  const eventDate = eventDateStr ? new Date(eventDateStr) : new Date(now.getTime() + 120 * 86400000)
+  const eventDate = eventDateStr
+    ? new Date(eventDateStr)
+    : new Date(now.getTime() + 120 * 86400000)
 
   let lines: string[] = [
     "BEGIN:VCALENDAR",
@@ -69,7 +67,9 @@ export function generateMilestonesIcs(
       `DTSTAMP:${nowIcs}`,
       `DTSTART;VALUE=DATE:${dateStr}`,
       `SUMMARY:${task.title}${task.isCriticalPath ? " [Critical Path]" : ""}`,
-      `DESCRIPTION:Category: ${task.category}\\nAssignee: ${task.assignee || "Family Coordinator"}\\nStatus: ${task.status}${task.dependency ? `\\nDepends on: ${task.dependency}` : ""}`,
+      `DESCRIPTION:Category: ${task.category}\\nAssignee: ${task.assignee || "Family Coordinator"}\\nStatus: ${task.status}${
+        task.dependency ? `\\nDepends on: ${task.dependency}` : ""
+      }`,
       `STATUS:${task.status === "Completed" ? "CONFIRMED" : "TENTATIVE"}`,
       "END:VEVENT",
     )
@@ -102,7 +102,9 @@ export function generateRunSheetIcs(
 ): string {
   const now = new Date()
   const nowIcs = toIcsTimestamp(now)
-  const baseDate = eventDateStr ? new Date(eventDateStr) : new Date(now.getTime() + 120 * 86400000)
+  const baseDate = eventDateStr
+    ? new Date(eventDateStr)
+    : new Date(now.getTime() + 120 * 86400000)
   const baseYear = baseDate.getFullYear()
   const baseMonth = baseDate.getMonth()
   const baseDay = baseDate.getDate()
@@ -140,7 +142,9 @@ export function generateRunSheetIcs(
       `DTEND:${toIcsTimestamp(end)}`,
       `SUMMARY:${item.title}`,
       `LOCATION:${item.location || "Venue"}`,
-      `DESCRIPTION:Responsible: ${item.owner}\\nStatus: ${item.status}${item.notes ? `\\nNotes: ${item.notes}` : ""}`,
+      `DESCRIPTION:Responsible: ${item.owner}\\nStatus: ${item.status}${
+        item.notes ? `\\nNotes: ${item.notes}` : ""
+      }`,
       "END:VEVENT",
     )
   })
@@ -148,4 +152,3 @@ export function generateRunSheetIcs(
   lines.push("END:VCALENDAR")
   return lines.join("\r\n")
 }
-

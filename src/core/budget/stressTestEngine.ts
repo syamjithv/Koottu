@@ -8,8 +8,11 @@
 import type { StressTestScenario, UnifiedEventPlan } from "../types.ts"
 import { formatINR } from "./budgetEngine.ts"
 
-export function runBudgetStressTests(plan: UnifiedEventPlan): StressTestScenario[] {
-  const currentTotal = plan.financials.totalAllocated + plan.financials.contingencyReserve
+export function runBudgetStressTests(
+  plan: UnifiedEventPlan,
+): StressTestScenario[] {
+  const currentTotal =
+    plan.financials.totalAllocated + plan.financials.contingencyReserve
   const currentDeficit = Math.max(0, currentTotal - plan.financials.totalBudget)
   const guests = plan.identity.guests
   const perPerson = plan.financials.foodPerPerson
@@ -46,7 +49,8 @@ export function runBudgetStressTests(plan: UnifiedEventPlan): StressTestScenario
     {
       id: "stress-venue-surcharge",
       title: "Venue Peak-Season Premium (+₹50k)",
-      description: "What if the chosen mandapam levies a peak-season air-conditioning and generator surcharge?",
+      description:
+        "What if the chosen mandapam levies a peak-season air-conditioning and generator surcharge?",
       deltaBudget: 0,
       deltaGuests: 0,
       deltaExpenses: venueSurcharge,
@@ -57,7 +61,8 @@ export function runBudgetStressTests(plan: UnifiedEventPlan): StressTestScenario
     {
       id: "stress-weather-monsoon",
       title: "Monsoon Waterproofing (+₹40k)",
-      description: "What if sudden rain requires an emergency covered shamiana and waterproof dining tunnel?",
+      description:
+        "What if sudden rain requires an emergency covered shamiana and waterproof dining tunnel?",
       deltaBudget: 0,
       deltaGuests: 0,
       deltaExpenses: weatherEmergency,
@@ -68,7 +73,8 @@ export function runBudgetStressTests(plan: UnifiedEventPlan): StressTestScenario
     {
       id: "stress-photo-extension",
       title: "Drone & Cinematic Film Add-on (+₹25k)",
-      description: "What if you add full 4K drone reels and pre-wedding traditional portraiture?",
+      description:
+        "What if you add full 4K drone reels and pre-wedding traditional portraiture?",
       deltaBudget: 0,
       deltaGuests: 0,
       deltaExpenses: photoExtension,
@@ -78,4 +84,3 @@ export function runBudgetStressTests(plan: UnifiedEventPlan): StressTestScenario
     },
   ]
 }
-

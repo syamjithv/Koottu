@@ -15,14 +15,8 @@ import type {
   VendorQuote,
   ScheduledTask,
 } from "../types.ts"
-import {
-  adaptPlan,
-  sumPlan,
-  formatINR,
-} from "../budget/budgetEngine.ts"
-import {
-  generateTradeOffScenarios,
-} from "../budget/tradeOffEngine.ts"
+import { adaptPlan, sumPlan, formatINR } from "../budget/budgetEngine.ts"
+import { generateTradeOffScenarios } from "../budget/tradeOffEngine.ts"
 import {
   analyzeScheduleFeasibility,
   getTimeline,
@@ -225,7 +219,8 @@ export function recalculateUnifiedPlan(
         floor: existing?.floor || 25000,
         actualSpent: existing?.actualSpent,
         contractedQuoteId: existing?.contractedQuoteId,
-        perPersonRate: c.key === "food" ? plan.financials.foodPerPerson : undefined,
+        perPersonRate:
+          c.key === "food" ? plan.financials.foodPerPerson : undefined,
       }
     })
   }
@@ -240,7 +235,13 @@ export function recalculateUnifiedPlan(
       for (const v of plan.vendors) {
         const match = v.quotes.find((q) => q.id === acceptedQuoteId)
         if (match) {
-          quoteCost = match.quotedAmount + (match.gstIncluded ? 0 : Math.round((match.quotedAmount * (match.gstRatePercent || 0)) / 100))
+          quoteCost =
+            match.quotedAmount +
+            (match.gstIncluded
+              ? 0
+              : Math.round(
+                  (match.quotedAmount * (match.gstRatePercent || 0)) / 100,
+                ))
           break
         }
       }
@@ -281,7 +282,10 @@ export function recalculateUnifiedPlan(
     categories: updatedCategories,
     lockedKeys,
   }
-  const tradeOffScenarios = generateTradeOffScenarios(currentPlanView, lockedKeys)
+  const tradeOffScenarios = generateTradeOffScenarios(
+    currentPlanView,
+    lockedKeys,
+  )
 
   // Recalculate Readiness Score
   const readiness = calculateCelebrationReadiness(
@@ -365,7 +369,10 @@ export function simulateDecisionImpact(
 ): DecisionImpactResult {
   const newBudget = plan.identity.budget + (proposed.budgetDelta || 0)
   const newGuests = plan.identity.guests + (proposed.guestDelta || 0)
-  const newMonths = Math.max(1, Math.min(12, plan.identity.months + (proposed.monthsDelta || 0)))
+  const newMonths = Math.max(
+    1,
+    Math.min(12, plan.identity.months + (proposed.monthsDelta || 0)),
+  )
   const newLockedKeys = proposed.lockedKeys || plan.lockedKeys
 
   // Clone and test proposed plan
@@ -377,20 +384,30 @@ export function simulateDecisionImpact(
   })
 
   if (proposed.acceptQuote) {
-    simulated.acceptedQuotes[proposed.acceptQuote.category] = proposed.acceptQuote.quoteId
+    simulated.acceptedQuotes[proposed.acceptQuote.category] =
+      proposed.acceptQuote.quoteId
   }
 
-  const beforeSpent = plan.financials.totalAllocated + plan.financials.contingencyReserve
-  const afterSpent = simulated.financials.totalAllocated + simulated.financials.contingencyReserve
+  const beforeSpent =
+    plan.financials.totalAllocated + plan.financials.contingencyReserve
+  const afterSpent =
+    simulated.financials.totalAllocated +
+    simulated.financials.contingencyReserve
 
-  const balanceDelta = simulated.financials.netBalance - plan.financials.netBalance
-  const readinessDelta = simulated.readiness.overallScore - plan.readiness.overallScore
-  const slackDelta = simulated.timelineFeasibility.slackDays - plan.timelineFeasibility.slackDays
+  const balanceDelta =
+    simulated.financials.netBalance - plan.financials.netBalance
+  const readinessDelta =
+    simulated.readiness.overallScore - plan.readiness.overallScore
+  const slackDelta =
+    simulated.timelineFeasibility.slackDays - plan.timelineFeasibility.slackDays
 
   let impactExplanation = ""
   if (proposed.guestDelta && proposed.guestDelta !== 0) {
-    const foodChange = Math.abs(proposed.guestDelta) * plan.financials.foodPerPerson
-    impactExplanation += `${proposed.guestDelta > 0 ? "Adding" : "Reducing"} ${Math.abs(proposed.guestDelta)} guests changes food catering cost by ${formatINR(foodChange)}. `
+    const foodChange =
+      Math.abs(proposed.guestDelta) * plan.financials.foodPerPerson
+    impactExplanation += `${
+      proposed.guestDelta > 0 ? "Adding" : "Reducing"
+    } ${Math.abs(proposed.guestDelta)} guests changes food catering cost by ${formatINR(foodChange)}. `
   }
   if (proposed.budgetDelta && proposed.budgetDelta !== 0) {
     impactExplanation += `Budget ceiling shifted by ${formatINR(proposed.budgetDelta)}. `
@@ -407,7 +424,8 @@ export function simulateDecisionImpact(
   } else if (readinessDelta > 0) {
     recommendation = `Recommended: strengthens celebration readiness by +${readinessDelta} points.`
   } else {
-    recommendation = "Acceptable: remains within approved financial and scheduling boundaries."
+    recommendation =
+      "Acceptable: remains within approved financial and scheduling boundaries."
   }
 
   return {

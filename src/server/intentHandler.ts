@@ -10,6 +10,14 @@ import { adaptPlan, sumPlan, formatINR, isOriginalPlan } from "../data.ts"
 import type { Plan, PlanIntent } from "../core/types.ts"
 import { GoogleGenAI } from "@google/genai"
 import * as dotenv from "dotenv"
+import {
+  createRateLimiter,
+  getClientIp,
+  sendJson,
+  enforcePost,
+  readJsonBody,
+  withTimeout,
+} from "./serverUtils.ts"
 
 dotenv.config()
 
@@ -28,53 +36,65 @@ export function parseIntentDeterministically(text: string): PlanIntent {
     /(?:reduce|cut|lower|decrease|trim)\s*(?:budget|spend|cost)?\s*(?:by)?\s*(?:₹|rs\.?)?\s*([0-9,]+)\s*(k|lakh|l)?/i,
   )
   if (reduceBudgetMatch) {
-    let amt = Number(reduceBudgetMatch[1].replace(/,/g, ""))
-    const unit = reduceBudgetMatch[2]?.toLowerCase()
-    if (unit === "k") amt *= 1000
-    else if (unit === "lakh" || unit === "l") amt *= 100000
-    budgetDelta = -amt
+    let val = Number.parseFloat(reduceBudgetMatch[1].replace(/,/g, ""))
+    const unit = (reduceBudgetMatch[2] || "").toLowerCase()
+    if (unit === "k") val *= 1000
+    if (unit === "lakh" || unit === "l") val *= 100000
+    budgetDelta = -Math.round(val)
   }
 
-  const addBudgetMatch = lower.match(
-    /(?:add|increase|raise|expand)\s*(?:budget|spend)?\s*(?:by)?\s*(?:₹|rs\.?)?\s*([0-9,]+)\s*(k|lakh|l)?/i,
+  const increaseBudgetMatch = lower.match(
+    /(?:increase|add|raise|boost)\s*(?:budget|spend)?\s*(?:by)?\s*(?:₹|rs\.?)?\s*([0-9,]+)\s*(k|lakh|l)?/i,
   )
-  if (addBudgetMatch) {
-    let amt = Number(addBudgetMatch[1].replace(/,/g, ""))
-    const unit = addBudgetMatch[2]?.toLowerCase()
-    if (unit === "k") amt *= 1000
-    else if (unit === "lakh" || unit === "l") amt *= 100000
-    budgetDelta = amt
+  if (increaseBudgetMatch) {
+    let val = Number.parseFloat(increaseBudgetMatch[1].replace(/,/g, ""))
+    const unit = (increaseBudgetMatch[2] || "").toLowerCase()
+    if (unit === "k") val *= 1000
+    if (unit === "lakh" || unit === "l") val *= 100000
+    budgetDelta = Math.round(val)
   }
 
-  // Check guest count adjustments: e.g. "add 30 guests", "reduce 20 guests"
+  // Check guest adjustments: e.g. "add 30 guests", "reduce guests to 200", "remove 20 guests"
   const addGuestsMatch = lower.match(
-    /(?:add|more|invite)\s*([0-9]+)\s*(?:more)?\s*guests?/i,
+    /(?:add|increase|more)\s*([0-9]+)\s*(?:guests|people|heads|attendees)?/i,
   )
   if (addGuestsMatch) {
-    guestDelta = Number(addGuestsMatch[1])
+    guestDelta = Number.parseInt(addGuestsMatch[1], 10)
   }
+
   const reduceGuestsMatch = lower.match(
-    /(?:reduce|trim|cut|fewer)\s*([0-9]+)\s*guests?/i,
+    /(?:cut|reduce|trim|fewer|less)\s*([0-9]+)\s*(?:guests|people|heads|attendees)?/i,
   )
   if (reduceGuestsMatch) {
-    guestDelta = -Number(reduceGuestsMatch[1])
+    guestDelta = -Number.parseInt(reduceGuestsMatch[1], 10)
+  }
+
+  // Check timeline adjustments: e.g. "shorten timeline by 1 month", "need 2 more months"
+  const addMonthsMatch = lower.match(
+    /(?:add|extend|more)\s*([0-9]+)\s*(?:months?)/i,
+  )
+  if (addMonthsMatch) {
+    monthsDelta = Number.parseInt(addMonthsMatch[1], 10)
+  }
+  const reduceMonthsMatch = lower.match(
+    /(?:shorten|reduce|faster by)\s*([0-9]+)\s*(?:months?)/i,
+  )
+  if (reduceMonthsMatch) {
+    monthsDelta = -Number.parseInt(reduceMonthsMatch[1], 10)
   }
 
   // Check locks
-  if (
-    /lock\s*(?:photo|photography)/i.test(lower) ||
-    /photography.*important/i.test(lower)
-  ) {
+  if (lower.includes("lock photo") || lower.includes("keep photo")) {
     lockedCategories.push("photo")
   }
-  if (/lock\s*venue/i.test(lower)) {
+  if (lower.includes("lock venue") || lower.includes("keep venue")) {
     lockedCategories.push("venue")
   }
-  if (/lock\s*decor/i.test(lower)) {
-    lockedCategories.push("decor")
-  }
-  if (/lock\s*food/i.test(lower) || /keep food/i.test(lower)) {
+  if (lower.includes("lock food") || lower.includes("keep food")) {
     lockedCategories.push("food")
+  }
+  if (lower.includes("lock decor") || lower.includes("keep decor")) {
+    lockedCategories.push("decor")
   }
 
   const recognized =
@@ -83,55 +103,43 @@ export function parseIntentDeterministically(text: string): PlanIntent {
     monthsDelta !== 0 ||
     lockedCategories.length > 0
 
+  const summary = recognized
+    ? `Adjusting: ${[
+        budgetDelta !== 0
+          ? `Budget ${budgetDelta > 0 ? "+" : ""}${formatINR(budgetDelta)}`
+          : null,
+        guestDelta !== 0
+          ? `Guests ${guestDelta > 0 ? "+" : ""}${guestDelta}`
+          : null,
+        monthsDelta !== 0
+          ? `Timeline ${monthsDelta > 0 ? "+" : ""}${monthsDelta}mo`
+          : null,
+        lockedCategories.length > 0
+          ? `Locked: ${lockedCategories.join(", ")}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" | ")}`
+    : "Could not parse clear numerical adjustment from query."
+
   return {
+    rawMessage: text,
     recognized,
-    summary: recognized
-      ? `Interpreted: ${
-          budgetDelta !== 0
-            ? `Budget ${budgetDelta > 0 ? "+" : ""}${formatINR(budgetDelta)}`
-            : ""
-        } ${
-          guestDelta !== 0
-            ? `Guests ${guestDelta > 0 ? "+" : ""}${guestDelta}`
-            : ""
-        } ${
-          lockedCategories.length > 0
-            ? `Locked: ${lockedCategories.join(", ")}`
-            : ""
-        }`
-      : "Could not identify specific numerical adjustments from request.",
+    summary,
     budgetDelta,
     guestDelta,
     monthsDelta,
     lockedCategories,
-    confidence: recognized ? 0.85 : 0.2,
+    confidence: recognized ? 0.95 : 0.2,
   }
 }
 
-// Basic in-memory rate limiting safeguard for local development / single-instance nodes
-// NOTE: In distributed or multi-instance production environments, distributed stores (e.g. Redis) are required.
-const rateLimitMap = new Map<string, number[]>()
-const RATE_LIMIT_WINDOW_MS = 60 * 1000
-const MAX_REQUESTS_PER_WINDOW = 20
-
-function checkRateLimit(clientIp: string): boolean {
-  const now = Date.now()
-  const timestamps = rateLimitMap.get(clientIp) || []
-  const valid = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
-  if (valid.length >= MAX_REQUESTS_PER_WINDOW) {
-    rateLimitMap.set(clientIp, valid)
-    return false
-  }
-  valid.push(now)
-  rateLimitMap.set(clientIp, valid)
-  return true
-}
+const rateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 20 })
 
 export async function handlePlanIntentRequest(
   req: IncomingMessage,
   res: ServerResponse,
 ): Promise<void> {
-  res.setHeader("Content-Type", "application/json")
   res.setHeader("Access-Control-Allow-Origin", "*")
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type")
@@ -142,67 +150,25 @@ export async function handlePlanIntentRequest(
     return
   }
 
-  if (req.method !== "POST") {
-    res.writeHead(405)
-    res.end(JSON.stringify({ error: "Method Not Allowed" }))
+  if (!enforcePost(req, res)) return
+
+  const clientIp = getClientIp(req)
+  if (!rateLimiter.check(clientIp)) {
+    sendJson(res, 429, {
+      error:
+        "Too many requests. Please wait a minute before requesting more interpretations.",
+    })
     return
   }
 
-  const clientIp =
-    (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
-    req.socket.remoteAddress ||
-    "unknown"
-  if (!checkRateLimit(clientIp)) {
-    res.writeHead(429)
-    res.end(
-      JSON.stringify({
-        error: "Too many requests. Please wait a minute before requesting more interpretations.",
-      }),
-    )
-    return
-  }
-
-  // Enforce 10KB request size limit
-  const MAX_BYTES = 10 * 1024
-  let body = ""
-  let receivedBytes = 0
-
-  try {
-    for await (const chunk of req) {
-      receivedBytes += chunk.length
-      if (receivedBytes > MAX_BYTES) {
-        res.writeHead(413)
-        res.end(
-          JSON.stringify({
-            error: "Payload Too Large: maximum allowed body is 10KB.",
-          }),
-        )
-        return
-      }
-      body += chunk
-    }
-  } catch {
-    res.writeHead(400)
-    res.end(JSON.stringify({ error: "Failed to read request body." }))
-    return
-  }
-
-  let payload: {
-    message: string
-    currentPlan: Plan
-  }
-
-  try {
-    payload = JSON.parse(body || "{}")
-  } catch {
-    res.writeHead(400)
-    res.end(JSON.stringify({ error: "Invalid JSON payload." }))
-    return
-  }
+  const payload = await readJsonBody<{ message: string; currentPlan: Plan }>(
+    req,
+    res,
+  )
+  if (!payload) return
 
   if (!payload.message || typeof payload.message !== "string") {
-    res.writeHead(422)
-    res.end(JSON.stringify({ error: "Message string required." }))
+    sendJson(res, 422, { error: "Message string required." })
     return
   }
 
@@ -220,53 +186,62 @@ export async function handlePlanIntentRequest(
   let intent: PlanIntent = deterministicIntent
   let isAiGenerated = false
 
+  // Try calling Gemini if API key is present
   if (apiKey) {
     try {
       const ai = new GoogleGenAI({ apiKey })
-      const prompt = `You are KOOTTU's natural language plan interpreter.
-The user wants to adjust their celebration plan.
-Current State:
-- Budget: ₹${current.budget}
+      const prompt = `You are KOOTTU's natural language intent interpreter for Indian celebration planning.
+Analyze this user request to adjust their celebration plan:
+"${payload.message}"
+
+Current plan context:
+- Budget: ₹${current.budget.toLocaleString("en-IN")}
 - Guests: ${current.guests}
 - Months: ${current.months}
+- Currently locked categories: ${(current.lockedKeys || []).join(", ") || "None"}
 
-User request: "${payload.message}"
+Extract any desired adjustments:
+- budgetDelta: Number in INR (positive if adding money, negative if reducing, 0 if unchanged)
+- guestDelta: Integer (positive if adding guests, negative if reducing, 0 if unchanged)
+- monthsDelta: Integer (positive if extending timeline, negative if shortening, 0 if unchanged)
+- lockedCategories: Array of category keys to lock ("venue", "food", "decor", "photo", "other")
+- summary: A single friendly sentence summarizing the changes
+- recognized: boolean
 
-Extract the intended numerical changes and category locks.
-Return ONLY valid JSON matching this schema:
+Output strictly valid JSON with this schema, no markdown code block fences:
 {
   "recognized": true,
-  "summary": "Clear one-sentence description of the interpreted plan changes",
-  "budgetDelta": 0, // integer change in INR (e.g. -50000 or +100000), 0 if unchanged
-  "guestDelta": 0,  // integer change in guest count (e.g. -30 or +50), 0 if unchanged
-  "monthsDelta": 0, // integer change in planning months (e.g. -1 or +2), 0 if unchanged
-  "lockedCategories": ["photo"], // array of "venue" | "food" | "decor" | "photo" | "other"
+  "summary": "Reducing budget by ₹50,000 and locking Photography",
+  "budgetDelta": -50000,
+  "guestDelta": 0,
+  "monthsDelta": 0,
+  "lockedCategories": ["photo"],
   "confidence": 0.95
 }`
 
-      const callPromise = ai.models.generateContent({
-        model: modelName,
-        contents: prompt,
-        config: {
-          temperature: 0.1,
-          maxOutputTokens: 400,
-          responseMimeType: "application/json",
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      })
-
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Timeout")), 15000),
+      const controller = new AbortController()
+      const response = await withTimeout(
+        ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            abortSignal: controller.signal,
+          },
+        }),
+        undefined,
+        "Intent call timed out",
+        controller,
       )
 
-      const response = await Promise.race([callPromise, timeoutPromise])
-      const aiResult = JSON.parse(response.text || "{}")
-      if (
-        aiResult.summary &&
-        (aiResult.budgetDelta !== undefined ||
-          aiResult.guestDelta !== undefined)
-      ) {
+      const text = response.text?.trim()
+      if (text) {
+        const cleanJson = text
+          .replace(/^```json/im, "")
+          .replace(/```$/m, "")
+          .trim()
+        const aiResult = JSON.parse(cleanJson)
         intent = {
+          rawMessage: payload.message,
           recognized: Boolean(aiResult.recognized),
           summary: String(aiResult.summary),
           budgetDelta: Number(aiResult.budgetDelta) || 0,
@@ -313,21 +288,18 @@ Return ONLY valid JSON matching this schema:
   const totalAllocated = sumPlan(proposedPlan)
   const balance = targetBudget - totalAllocated
 
-  res.writeHead(200)
-  res.end(
-    JSON.stringify({
-      status: "success",
-      isAiGenerated,
-      intent,
-      proposedPlan,
-      financials: {
-        budget: targetBudget,
-        guests: targetGuests,
-        months: targetMonths,
-        totalAllocated,
-        balance,
-        isDeficit: balance < 0,
-      },
-    }),
-  )
+  sendJson(res, 200, {
+    status: "success",
+    isAiGenerated,
+    intent,
+    proposedPlan,
+    financials: {
+      budget: targetBudget,
+      guests: targetGuests,
+      months: targetMonths,
+      totalAllocated,
+      balance,
+      isDeficit: balance < 0,
+    },
+  })
 }

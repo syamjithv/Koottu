@@ -42,7 +42,10 @@ test("tradeOffEngine: generates 3 distinct mathematically verified scenarios for
   assert.equal(scenarioA?.isFullyBalanced, false)
   // Mathematical integrity: proposed plan spend must reflect the exact 7,000 residual deficit
   assert.equal(sumPlan(scenarioA!.proposedPlan), 647000)
-  assert.equal(scenarioA!.proposedPlan.budget - sumPlan(scenarioA!.proposedPlan), -7000)
+  assert.equal(
+    scenarioA!.proposedPlan.budget - sumPlan(scenarioA!.proposedPlan),
+    -7000,
+  )
   assert.match(scenarioA!.description, /saves ₹45,000/)
   assert.match(scenarioA!.description, /leaving ₹7,000/)
 
@@ -71,7 +74,9 @@ test("tradeOffEngine: category locks prevent rebalancing from touching locked ca
   // Lock photography so it cannot be trimmed
   const scenarios = generateTradeOffScenarios(constrainedPlan, ["photo"])
   const scenarioB = scenarios.find((s) => s.id === "category-rebalance")
-  const photoCat = scenarioB?.proposedPlan.categories.find((c) => c.key === "photo")
+  const photoCat = scenarioB?.proposedPlan.categories.find(
+    (c) => c.key === "photo",
+  )
   assert.equal(photoCat?.amount, 86000) // Photography unchanged!
   assert.equal(photoCat?.locked, true)
 })

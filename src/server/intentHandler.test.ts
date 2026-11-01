@@ -16,7 +16,9 @@ function createMockHttp(
   ;(req as any).method = method
   ;(req as any).url = "/api/plan-intent"
   ;(req as any).headers = { "content-type": "application/json", ...headers }
-  ;(req as any).socket = { remoteAddress: `127.0.0.${Math.floor(Math.random() * 250)}` }
+  ;(req as any).socket = {
+    remoteAddress: `127.0.0.${Math.floor(Math.random() * 250)}`,
+  }
   ;(req as any)[Symbol.asyncIterator] = async function* () {
     yield Buffer.from(body)
   }

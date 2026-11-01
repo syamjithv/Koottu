@@ -46,7 +46,8 @@ export function generateTradeOffScenarios(
         remainingDeficit: 0,
         isFullyBalanced: true,
         categoryDeltas: {},
-        tradeOffSummary: "Maintains existing allocations with safe contingency cushion.",
+        tradeOffSummary:
+          "Maintains existing allocations with safe contingency cushion.",
         timelineImpact: "Standard timeline with zero acceleration required.",
       },
     ]
@@ -103,7 +104,8 @@ export function generateTradeOffScenarios(
     isFullyBalanced: remainingDeficitA === 0,
     categoryDeltas: catDeltasA,
     tradeOffSummary: `Reduces catering load by ${guestTrimCount} covers while preserving venue and photography commitments.`,
-    timelineImpact: "Finalize guest estimates within 10 days to confirm updated catering headcount.",
+    timelineImpact:
+      "Finalize guest estimates within 10 days to confirm updated catering headcount.",
   }
 
   // --- SCENARIO B: Headcount Protected (Category Rebalance) ---
@@ -119,7 +121,8 @@ export function generateTradeOffScenarios(
     if (lockedKeys.includes(key)) continue
     const cat = mutableCategoriesB.find((c) => c.key === key)
     if (!cat) continue
-    const floor = CATEGORY_FLOORS[key as keyof typeof CATEGORY_FLOORS] || 25000
+    const floor =
+      CATEGORY_FLOORS[(key as keyof typeof CATEGORY_FLOORS)] || 25000
     const availableToTrim = Math.max(0, cat.amount - floor)
     const trimAmount = Math.min(unabsorbedB, availableToTrim)
     cat.amount -= trimAmount
@@ -155,8 +158,10 @@ export function generateTradeOffScenarios(
     remainingDeficit: unabsorbedB,
     isFullyBalanced: unabsorbedB === 0,
     categoryDeltas: catDeltasB,
-    tradeOffSummary: "Decor, photography coverage hours, or misc items are trimmed to maintain full attendance.",
-    timelineImpact: "No guest deadline disruption; renegotiate quotes with decor and misc vendors.",
+    tradeOffSummary:
+      "Decor, photography coverage hours, or misc items are trimmed to maintain full attendance.",
+    timelineImpact:
+      "No guest deadline disruption; renegotiate quotes with decor and misc vendors.",
   }
 
   // --- SCENARIO C: Balanced Compromise ---
@@ -182,7 +187,8 @@ export function generateTradeOffScenarios(
     if (lockedKeys.includes(key)) continue
     const cat = mutableCategoriesC.find((c) => c.key === key)
     if (!cat) continue
-    const floor = CATEGORY_FLOORS[key as keyof typeof CATEGORY_FLOORS] || 25000
+    const floor =
+      CATEGORY_FLOORS[(key as keyof typeof CATEGORY_FLOORS)] || 25000
     const availableToTrim = Math.max(0, cat.amount - floor)
     const trimAmount = Math.min(unabsorbedC, availableToTrim)
     cat.amount -= trimAmount
@@ -215,8 +221,10 @@ export function generateTradeOffScenarios(
     remainingDeficit: unabsorbedC,
     isFullyBalanced: unabsorbedC === 0,
     categoryDeltas: catDeltasC,
-    tradeOffSummary: "Mild cuts shared between guest count and non-essential decor.",
-    timelineImpact: "Standard task flow remains viable with minimal vendor friction.",
+    tradeOffSummary:
+      "Mild cuts shared between guest count and non-essential decor.",
+    timelineImpact:
+      "Standard task flow remains viable with minimal vendor friction.",
   }
 
   return [scenarioA, scenarioB, scenarioC]

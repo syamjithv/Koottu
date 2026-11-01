@@ -12,6 +12,14 @@ import {
 import { GoogleGenAI } from "@google/genai"
 import * as dotenv from "dotenv"
 import type { IncomingMessage, ServerResponse } from "node:http"
+import {
+  createRateLimiter,
+  getClientIp,
+  sendJson,
+  enforcePost,
+  readJsonBody,
+  withTimeout,
+} from "./serverUtils.ts"
 
 // Load environment variables from .env
 dotenv.config()
@@ -29,25 +37,8 @@ export type RecommendationRequest = {
   }
 }
 
-// Basic in-memory rate limiting safeguard for local/single-node instances
-const rateLimitMap = new Map<string, number[]>()
-const RATE_LIMIT_WINDOW_MS = 60 * 1000 // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 15
-
-function checkRateLimit(clientIp: string): boolean {
-  const now = Date.now()
-  const timestamps = rateLimitMap.get(clientIp) || []
-  const validTimestamps = timestamps.filter(
-    (t) => now - t < RATE_LIMIT_WINDOW_MS,
-  )
-  if (validTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
-    rateLimitMap.set(clientIp, validTimestamps)
-    return false
-  }
-  validTimestamps.push(now)
-  rateLimitMap.set(clientIp, validTimestamps)
-  return true
-}
+// In-memory sliding window rate limiter
+const rateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 20 })
 
 // Generate mathematically sound, dependency-aware fallback recommendations
 export function generateDeterministicFallback(
@@ -153,61 +144,19 @@ export async function handleApiRequest(
     return
   }
 
-  if (req.method !== "POST") {
-    res.writeHead(405)
-    res.end(JSON.stringify({ error: "Method Not Allowed" }))
+  if (!enforcePost(req, res)) return
+
+  const clientIp = getClientIp(req)
+  if (!rateLimiter.check(clientIp)) {
+    sendJson(res, 429, {
+      error:
+        "Too many requests. Please wait a minute before requesting more recommendations.",
+    })
     return
   }
 
-  // Basic IP-based rate limiting safeguard
-  const clientIp =
-    (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
-    req.socket.remoteAddress ||
-    "unknown"
-  if (!checkRateLimit(clientIp)) {
-    res.writeHead(429)
-    res.end(
-      JSON.stringify({
-        error:
-          "Too many requests. Please wait a minute before requesting more recommendations.",
-      }),
-    )
-    return
-  }
-
-  // Read request body with strict size limit (10 KB)
-  const MAX_BYTES = 10 * 1024
-  let body = ""
-  let receivedBytes = 0
-
-  try {
-    for await (const chunk of req) {
-      receivedBytes += chunk.length
-      if (receivedBytes > MAX_BYTES) {
-        res.writeHead(413)
-        res.end(
-          JSON.stringify({
-            error: "Payload Too Large: maximum allowed body is 10KB.",
-          }),
-        )
-        return
-      }
-      body += chunk
-    }
-  } catch {
-    res.writeHead(400)
-    res.end(JSON.stringify({ error: "Failed to read request body." }))
-    return
-  }
-
-  let payload: RecommendationRequest
-  try {
-    payload = JSON.parse(body || "{}")
-  } catch {
-    res.writeHead(400)
-    res.end(JSON.stringify({ error: "Invalid JSON payload." }))
-    return
-  }
+  const payload = await readJsonBody<RecommendationRequest>(req, res)
+  if (!payload) return
 
   // Validate and sanitize numeric fields
   const rawBudget = Number(payload.budget)
@@ -215,32 +164,23 @@ export async function handleApiRequest(
   const rawMonths = Number(payload.months)
 
   if (isNaN(rawBudget) || rawBudget < 300000 || rawBudget > 50000000) {
-    res.writeHead(422)
-    res.end(
-      JSON.stringify({
-        error: "Budget must be a number between ₹3,00,000 and ₹5,00,00,000.",
-      }),
-    )
+    sendJson(res, 422, {
+      error: "Budget must be a number between ₹3,00,000 and ₹5,00,00,000.",
+    })
     return
   }
 
   if (isNaN(rawGuests) || rawGuests < 20 || rawGuests > 500) {
-    res.writeHead(422)
-    res.end(
-      JSON.stringify({
-        error: "Guests must be an integer between 20 and 500.",
-      }),
-    )
+    sendJson(res, 422, {
+      error: "Guests must be an integer between 20 and 500.",
+    })
     return
   }
 
   if (isNaN(rawMonths) || rawMonths < 1 || rawMonths > 12) {
-    res.writeHead(422)
-    res.end(
-      JSON.stringify({
-        error: "Months planning window must be between 1 and 12.",
-      }),
-    )
+    sendJson(res, 422, {
+      error: "Months planning window must be between 1 and 12.",
+    })
     return
   }
 
@@ -367,29 +307,27 @@ Provide your response as a JSON object with this exact structure:
   "timelineNote": "Specific note evaluating the actual task dependencies and timeline window"
 }`
 
-    // Enforce 120-second timeout on Gemini API call
-    const callPromise = ai.models.generateContent({
-      model: modelName,
-      contents: userPrompt,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.2,
-        maxOutputTokens: 2000,
-        responseMimeType: "application/json",
-        thinkingConfig: {
-          thinkingBudget: 0,
+    // Call Gemini with safe abortable timeout (configurable via GEMINI_TIMEOUT_MS, default 60s)
+    const controller = new AbortController()
+    const response = await withTimeout(
+      ai.models.generateContent({
+        model: modelName,
+        contents: userPrompt,
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: 0.2,
+          maxOutputTokens: 2000,
+          responseMimeType: "application/json",
+          abortSignal: controller.signal,
+          thinkingConfig: {
+            thinkingBudget: 0,
+          },
         },
-      },
-    })
-
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error("Gemini API call timed out after 120s")),
-        120000,
-      ),
+      }),
+      undefined,
+      "Gemini API call timed out",
+      controller,
     )
-
-    const response = await Promise.race([callPromise, timeoutPromise])
 
     const responseText = response.text || ""
     const fallbackRecs = generateDeterministicFallback(
@@ -463,15 +401,12 @@ Provide your response as a JSON object with this exact structure:
       }
     }
 
-    res.writeHead(200)
-    res.end(
-      JSON.stringify({
-        status: parseSuccess ? "success" : "fallback",
-        isAiGenerated: parseSuccess,
-        groundTruth,
-        recommendations: parsedData,
-      }),
-    )
+    sendJson(res, 200, {
+      status: parseSuccess ? "success" : "fallback",
+      isAiGenerated: parseSuccess,
+      groundTruth,
+      recommendations: parsedData,
+    })
   } catch (err: unknown) {
     // Safe error handling: log server-side, never leak credentials or internal errors to client
     const errorMessage =
@@ -483,16 +418,13 @@ Provide your response as a JSON object with this exact structure:
       rawMonths,
       context,
     )
-    res.writeHead(200)
-    res.end(
-      JSON.stringify({
-        status: "fallback",
-        isAiGenerated: false,
-        groundTruth,
-        recommendations: fallbackRecs,
-        error:
-          "AI service temporarily unavailable; displaying verified deterministic recommendation.",
-      }),
-    )
+    sendJson(res, 200, {
+      status: "fallback",
+      isAiGenerated: false,
+      groundTruth,
+      recommendations: fallbackRecs,
+      error:
+        "AI service temporarily unavailable; displaying verified deterministic recommendation.",
+    })
   }
 }

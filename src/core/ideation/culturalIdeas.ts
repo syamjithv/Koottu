@@ -54,4 +54,3 @@ export const DEFAULT_CULTURAL_IDEAS: EventIdea[] = [
     saved: false,
   },
 ]
-

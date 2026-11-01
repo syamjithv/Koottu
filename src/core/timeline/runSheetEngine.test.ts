@@ -12,7 +12,11 @@ test("runSheetEngine: generates valid RFC 5545 iCalendar for milestones", () => 
 
   assert.ok(ics.startsWith("BEGIN:VCALENDAR"))
   assert.ok(ics.includes("VERSION:2.0"))
-  assert.ok(ics.includes("SUMMARY:Confirm wedding auditorium / mandapam [Critical Path]"))
+  assert.ok(
+    ics.includes(
+      "SUMMARY:Confirm wedding auditorium / mandapam [Critical Path]",
+    ),
+  )
   assert.ok(ics.includes("★ Radha & Vivek Wedding Celebration Day ★"))
   assert.ok(ics.endsWith("END:VCALENDAR"))
 })
@@ -29,4 +33,3 @@ test("runSheetEngine: generates valid RFC 5545 iCalendar for event-day run sheet
   assert.ok(ics.includes("Traditional Elasadhya Banquet"))
   assert.ok(ics.endsWith("END:VCALENDAR"))
 })
-

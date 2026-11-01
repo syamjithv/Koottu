@@ -41,7 +41,12 @@ test("readinessEngine: computes score deterministically based on four 25-point p
   ]
   const acceptedQuotes = { venue: "q1", food: "q2" }
 
-  const readiness = calculateCelebrationReadiness(financials, feasibility, tasks, acceptedQuotes)
+  const readiness = calculateCelebrationReadiness(
+    financials,
+    feasibility,
+    tasks,
+    acceptedQuotes,
+  )
 
   assert.equal(readiness.budgetScore, 25)
   assert.equal(readiness.timelineScore, 25)
@@ -52,4 +57,3 @@ test("readinessEngine: computes score deterministically based on four 25-point p
   assert.equal(readiness.overallScore, 25 + 25 + 18 + 19) // 87
   assert.ok(readiness.summary.length > 0)
 })
-
