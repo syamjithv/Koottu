@@ -230,3 +230,4 @@ npm run build
 - **Payload Restrictions**: Request size is limited to 10KB to prevent memory exhaustion.
 - **Numerical Validation**: All numeric inputs are validated server-side (Budget: ₹3L–₹5Cr, Guests: 20–500, Months: 1–12).
 - **Graceful Fallbacks**: If the Gemini API experiences temporary 503 high demand or network latency, the endpoints return verified deterministic recommendations (`status: "fallback"`) ensuring zero UI disruption.
+
