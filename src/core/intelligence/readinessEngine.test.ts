@@ -52,3 +52,4 @@ test("readinessEngine: computes score deterministically based on four 25-point p
   assert.equal(readiness.overallScore, 25 + 25 + 18 + 19) // 87
   assert.ok(readiness.summary.length > 0)
 })
+

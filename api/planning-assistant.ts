@@ -11,3 +11,4 @@ export default async function handler(
 ): Promise<void> {
   return handlePlanningAssistantRequest(req, res)
 }
+

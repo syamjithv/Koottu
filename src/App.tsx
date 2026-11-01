@@ -1953,7 +1953,8 @@ function AdaptDrawer({
     budget !== current.budget ||
     guests !== current.guests ||
     months !== current.months ||
-    activeLockedKeys.length !== lockedKeys.length
+    activeLockedKeys.length !== lockedKeys.length ||
+    selectedScenarioPlan !== null
   const invalid = budget < 300000 || guests < 20 || guests > 500
 
   // Multi-scenario trade-off generation
@@ -1963,7 +1964,7 @@ function AdaptDrawer({
   }, [proposal, balance, activeLockedKeys])
 
   const decisionImpact = useMemo(() => {
-    if (!changed) return null
+    if (!changed && !selectedScenarioPlan && balance >= 0) return null
     const dummyPlan: UnifiedEventPlan = {
       id: "drawer-plan",
       version: 3,
@@ -2301,7 +2302,7 @@ function AdaptDrawer({
           <div className="validation" role="alert">
             Enter a budget of at least ₹3,00,000 and between 20–500 guests.
           </div>
-        ) : !changed ? (
+        ) : !changed && balance >= 0 && !selectedScenarioPlan ? (
           <div className="empty-preview" aria-live="polite">
             <strong>Your {currentLabel.toLowerCase()} is unchanged.</strong>
             <span>
@@ -2962,8 +2963,15 @@ export default function App() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>(
     () => initialLoaded?.taskAssignees || {},
   )
-  const [acceptedQuotes, setAcceptedQuotes] = useState<Record<string, string>>({})
-  const [contingencyPercent, setContingencyPercent] = useState<number>(5)
+  const [acceptedQuotes, setAcceptedQuotes] = useState<Record<string, string>>(
+    () => initialLoaded?.acceptedQuotes || {},
+  )
+  const [contingencyPercent, setContingencyPercent] = useState<number>(
+    () =>
+      typeof initialLoaded?.contingencyPercent === "number"
+        ? initialLoaded.contingencyPercent
+        : 5,
+  )
 
   // Auto-save to localStorage with versioning
   useEffect(() => {
@@ -2977,9 +2985,21 @@ export default function App() {
       vendorQuotes,
       customTaskStatuses,
       taskAssignees,
+      acceptedQuotes,
+      contingencyPercent,
       history: [],
     })
-  }, [setup, plan, accepted, lockedKeys, vendorQuotes, customTaskStatuses, taskAssignees])
+  }, [
+    setup,
+    plan,
+    accepted,
+    lockedKeys,
+    vendorQuotes,
+    customTaskStatuses,
+    taskAssignees,
+    acceptedQuotes,
+    contingencyPercent,
+  ])
 
   const handleToggleLock = (key: string) => {
     setLockedKeys((prev) =>

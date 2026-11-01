@@ -29,3 +29,4 @@ test("runSheetEngine: generates valid RFC 5545 iCalendar for event-day run sheet
   assert.ok(ics.includes("Traditional Elasadhya Banquet"))
   assert.ok(ics.endsWith("END:VCALENDAR"))
 })
+

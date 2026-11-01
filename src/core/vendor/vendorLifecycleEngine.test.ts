@@ -60,3 +60,4 @@ test("vendorLifecycleEngine: generates respectful Kerala vendor inquiry draft", 
   assert.ok(draft.includes("200 pax"))
   assert.ok(draft.includes("₹85,000"))
 })
+

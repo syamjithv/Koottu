@@ -359,4 +359,6 @@ export type StoredAppState = {
   unifiedPlan?: UnifiedEventPlan
   activeTab?: string
   taskAssignees?: Record<string, string>
+  contingencyPercent?: number
+  acceptedQuotes?: Record<string, string>
 }

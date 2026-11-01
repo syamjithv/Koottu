@@ -480,3 +480,4 @@ export function findTemplateByOccasion(occasion: string): OccasionTemplate {
   }
   return KERALA_WEDDING_TEMPLATE
 }
+

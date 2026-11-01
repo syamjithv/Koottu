@@ -25,3 +25,4 @@ test("insightEngine: flags unconfirmed core vendors (venue, food, photo)", () =>
   assert.ok(insights.some((i) => i.id === "insight-vendor-unconfirmed-venue"))
   assert.ok(insights.some((i) => i.id === "insight-vendor-unconfirmed-food"))
 })
+

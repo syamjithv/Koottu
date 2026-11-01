@@ -241,23 +241,30 @@ npm test
 # On Windows PowerShell:
 npm.cmd run test
 ```
-*Executes all 46 automated unit and integration tests across 13 test suites in ~16–18s with 0 failures.*
+*Executes all 59 automated unit and integration tests across 15 test suites in ~17–19s with 0 failures.*
 
-### 4. Run Competition QA Sprint Verification
+### 4. Run API & Mathematical Integrity Verifier
 
 ```bash
 node scripts/e2e-qa-sprint.mjs
 ```
 *Executes 68 end-to-end integration and mathematical assertions verifying 100% check pass rate across ground-truth math, DAG feasibility, category locks, stress tests, readiness scoring, vendor matrices, run sheets, and HTTP security boundaries.*
 
-### 5. Start Local Development Server
+### 5. Run Real Browser (Playwright) E2E Automation
+
+```bash
+node scripts/browser-audit.mjs
+```
+*Executes 36 complete user journeys in a real Chromium browser (Microsoft Edge headless), covering Landing -> Setup Flow -> Workspace, Contingency Slider adjustments, Stress Test simulator expansion, Vendor quote comparison, ics calendar downloads, Adapt Drawer trade-off application, local persistence across reloads, and mobile viewport responsiveness with 0 console errors.*
+
+### 6. Start Local Development Server
 
 ```bash
 npm run dev
 ```
 *Starts Vite with the server-side API middleware on `http://localhost:8443`.*
 
-### 6. Build for Production
+### 7. Build for Production
 
 ```bash
 npm run build
@@ -269,33 +276,34 @@ npm run build
 ## 6. End-to-End Demonstration Walkthrough
 
 1. Open `http://localhost:8443`.
-2. Observe the **Celebration Readiness Score** pill in the top header and the **Proactive Insights Banner** surfacing active budget alerts.
-3. Observe the benchmark scenario in the **Visual Budget Planner**:
-   - Available budget: **₹6,40,000**, Allocated: **₹6,92,000**, Deficit: **−₹52,000**.
-   - Food catering protected at **₹3,45,000** for 230 guests.
+2. Complete the **Setup Flow** or click **Reset Demo** in the workspace header.
+3. Observe the **Celebration Readiness Score** pill in the top header and the **Proactive Insights Banner** surfacing active budget alerts.
+4. Observe the benchmark scenario in the **Visual Budget Planner**:
+   - Available budget: **₹6,40,000**, Allocated: **₹6,92,000**, Baseline Deficit: **−₹52,000** (or **−₹84,000** with 5% contingency cushion).
+   - Food catering protected at **₹3,45,000** for 230 guests ($230 \times ₹1,500$).
    - Adjust the **Contingency Reserve Slider** (0–10%) to see real-time reserve allocation.
    - Expand the **Budget Stress Testing Simulator** to review shock impacts (+20% guests, venue surcharge, monsoon emergency).
-4. Explore the **Vendor Quotations & Pipeline** section:
-   - Click **Sadya Caterers (Kochi)** or **Lumière Visual Studios**.
+5. Explore the **Vendor Quotations & Pipeline** section:
+   - Click **Sadya Caterers (Kochi)** or **Lumière Visual Studios** (sample benchmark rates provided for illustration).
    - Toggle **Compare 3 Quotes in Category** to evaluate the multi-quote value matrix.
-   - Click **Accept Quote** to lock the vendor into the plan.
-   - Click **Copy Inquiry Message** to get a culturally respectful Malayalam/English booking draft.
+   - Click **Accept Quote** to contract the vendor into the plan.
+   - Click **Inquiry Draft** to review and copy a culturally respectful Malayalam/English booking draft.
    - Click **✦ Audit with Gemini 3.8 Flash** to view AI negotiation advice and risk flags.
-5. Explore the **Milestone Timeline & Run Sheet**:
-   - Click **Download Milestones (.ics)** to export RFC 5545 calendar entries.
-   - Review the **Event-Day Chronological Run Sheet** and click **Export Run Sheet (.ics)**.
-6. Open the **Adapt Plan** drawer:
+6. Explore the **Milestone Timeline & Run Sheet**:
+   - Click **Download .ics** to export RFC 5545 calendar entries for planning milestones.
+   - Review the **Event-Day Chronological Run Sheet** (Muhurtham at 09:45 AM) and click **Download Day-of .ics**.
+7. Open the **Adapt Plan** drawer:
    - Type *"Reduce budget by 50,000 and lock photography"* and click **✦ Interpret**.
    - Ask questions in the **Ask Planning Advisor** box (*"What is the best rain contingency for sadya dining?"*).
    - Review **Cultural Celebration Concepts** for creative inspiration.
    - Preview trade-off scenarios and observe the **Decision Impact Preview** before committing.
    - Click **Accept changes** — observe celebration hero update with renewed readiness.
-7. Click **Print Celebration Summary** to generate an offline, printable family brief.
-8. Refresh the browser — observe all state, locks, and quotes survive via local-first persistence v3.
+8. Click **Print Brief** to generate an offline, printable family celebration summary.
+9. Refresh the browser — observe all state, locks, contingency, and contracted quotes survive via local-first persistence v3.
 
 ---
 
-## 7. Security, Resilience & Production Deployment
+## 7. Security, Resilience & Deployment Architecture
 
 ### Secret & Key Isolation
 - `GEMINI_API_KEY` is loaded exclusively inside Node.js server environments (`src/server/` and `api/`). It is **never** prefixed with `VITE_` and never bundled into client JavaScript.
@@ -313,14 +321,10 @@ npm run build
 - If Google Gemini returns HTTP 503, high network latency (>120s timeout), or `RESOURCE_EXHAUSTED` (Google AI Studio Free Tier quota limit of 20 requests/day on `gemini-3.8-flash`), the server intercepts the exception gracefully.
 - Instead of failing or displaying broken UI states, the system returns a verified deterministic response with `status: "fallback"`, `isAiGenerated: false`, and an informational badge. The user receives 100% accurate ground-truth calculations, cultural ideas, and recommendations without interruption.
 
-### Production Deployment (Vercel)
-The repository is production-ready for Vercel deployment:
+### Production Deployment Architecture (Vercel)
+The repository is structured for Vercel serverless deployment:
 - `vercel.json` configures serverless routing:
   - `/api/(.*)` routes to Node.js serverless functions in `api/$1.ts`.
   - Client-side routes rewrite to `/index.html` for single-page app navigation.
-- To deploy:
-  ```bash
-  npx vercel --prod
-  ```
-  Set `GEMINI_API_KEY` in the Vercel Project Settings > Environment Variables.
+- *Deployment Status*: Serverless entrypoints are fully compatible and tested locally. Live cloud deployment requires configuring `GEMINI_API_KEY` in the hosting provider's project dashboard (`npx vercel --prod`).
 

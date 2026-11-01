@@ -79,6 +79,11 @@ export function loadStoredAppState(): StoredAppState | null {
       customTaskStatuses: parsed.customTaskStatuses || {},
       history: Array.isArray(parsed.history) ? parsed.history : [],
       taskAssignees: parsed.taskAssignees || {},
+      contingencyPercent:
+        typeof parsed.contingencyPercent === "number"
+          ? parsed.contingencyPercent
+          : 5,
+      acceptedQuotes: parsed.acceptedQuotes || {},
       unifiedPlan: parsed.unifiedPlan,
     }
 

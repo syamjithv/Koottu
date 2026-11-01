@@ -54,3 +54,4 @@ test("unifiedPlanEngine: simulateDecisionImpact previews guest count and budget 
   assert.equal(impact.deltas.spentDelta < 0, true) // Reduced spend
   assert.ok(impact.impactExplanation.includes("45,000")) // 30 * 1500 = 45,000
 })
+

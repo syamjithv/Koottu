@@ -70,7 +70,11 @@ export function parseVendorQuote(
   // 4. Extract GST
   let gstRatePercent = 0
   let gstIncluded = false
-  if (/gst\s*(?:included|inclusive|incl)/i.test(text)) {
+  if (
+    /gst\s*(?:included|inclusive|incl)|inclusive\s*of\s*(?:all\s*)?(?:gst|taxes)|all\s*taxes\s*included/i.test(
+      text,
+    )
+  ) {
     gstIncluded = true
     gstRatePercent = 18 // standard default
   } else if (/(\d{1,2})%\s*gst/i.test(text)) {

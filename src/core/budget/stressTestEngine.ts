@@ -78,3 +78,4 @@ export function runBudgetStressTests(plan: UnifiedEventPlan): StressTestScenario
     },
   ]
 }
+
