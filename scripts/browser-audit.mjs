@@ -193,6 +193,7 @@ async function runBrowserAudit() {
   await page.waitForTimeout(400)
   const matrixTable = page.locator('.quote-compare-table').first()
   assertJourney("3-Quote Value Comparison Matrix Visible", await matrixTable.isVisible())
+  await page.screenshot({ path: path.join(SCREENSHOT_DIR, "05b_vendor_matrix.png") })
 
   // Open Inquiry Draft Modal
   const inquiryBtn = page.locator('button:has-text("Inquiry Draft")').first()

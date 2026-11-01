@@ -15,6 +15,9 @@ logs/
 *.log
 .claude-replay.*
 .tmp-*
+tmp/
+.DS_Store
+.gemini/
 /.figma/design-context/
 test-screenshots/
 
