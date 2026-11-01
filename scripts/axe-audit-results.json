@@ -1,0 +1,37 @@
+[
+  {
+    "view": "1. Landing Screen",
+    "passes": 13,
+    "violations": []
+  },
+  {
+    "view": "2. Setup Flow - Step 1 (Occasion)",
+    "passes": 19,
+    "violations": []
+  },
+  {
+    "view": "3. Setup Flow - Step 2 (Guests & Budget)",
+    "passes": 22,
+    "violations": []
+  },
+  {
+    "view": "4. Setup Flow - Step 3 (Priorities)",
+    "passes": 21,
+    "violations": []
+  },
+  {
+    "view": "5. Setup Flow - Step 4 (Review)",
+    "passes": 19,
+    "violations": []
+  },
+  {
+    "view": "6. Workspace (Main View)",
+    "passes": 23,
+    "violations": []
+  },
+  {
+    "view": "7. Adapt Plan Drawer",
+    "passes": 25,
+    "violations": []
+  }
+]
