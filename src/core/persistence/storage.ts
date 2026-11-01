@@ -127,8 +127,12 @@ export function importPlanJSON(jsonStr: string): StoredAppState | null {
   try {
     const parsed = JSON.parse(jsonStr)
     if (!parsed.setup || !parsed.plan) return null
-    saveStoredAppState(parsed)
-    return loadStoredAppState()
+    if (typeof window !== "undefined" && window.localStorage) {
+      saveStoredAppState(parsed)
+      return loadStoredAppState()
+    }
+    // Return parsed directly in non-browser/test environments
+    return parsed as StoredAppState
   } catch {
     return null
   }

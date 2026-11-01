@@ -5,7 +5,7 @@
  * when a plan is in deficit or needs optimization.
  *
  * Scenario A: Guest Count Optimization (saves ₹1,500/guest on catering)
- * Scenario B: Headcount Protected (reallocates unlocked flexible categories)
+ * Scenario B: Headcount Protected (rebalances unlocked flexible categories down to floors)
  * Scenario C: Balanced Compromise (modest guest trim + mild category adjustments)
  */
 
@@ -27,7 +27,6 @@ export function generateTradeOffScenarios(
   const deficit = balance < 0 ? Math.abs(balance) : 0
 
   if (deficit === 0) {
-    // If no deficit, provide optimization scenarios for reserve buffer or enhancements
     const bufferPlan = adaptPlan(
       currentPlan.budget,
       currentPlan.guests,
@@ -47,26 +46,38 @@ export function generateTradeOffScenarios(
         remainingDeficit: 0,
         isFullyBalanced: true,
         categoryDeltas: {},
-        tradeOffSummary:
-          "Maintains existing allocations with safe contingency cushion.",
+        tradeOffSummary: "Maintains existing allocations with safe contingency cushion.",
         timelineImpact: "Standard timeline with zero acceleration required.",
       },
     ]
   }
 
   // --- SCENARIO A: Guest Count Optimization ---
-  // Trims guest count by up to 30 guests (saves 30 * 1500 = ₹45,000)
+  // Trims guest count by up to 30 guests (saves 30 * 1500 = ₹45,000 on food)
+  // All other category commitments are held constant so the residual deficit is explicit.
   const guestTrimCount = Math.min(30, Math.max(10, currentPlan.guests - 20))
   const targetGuestsA = currentPlan.guests - guestTrimCount
   const savingsA = guestTrimCount * FOOD_RATE_PER_GUEST
   const remainingDeficitA = Math.max(0, deficit - savingsA)
 
-  const planA = adaptPlan(
-    currentPlan.budget,
-    targetGuestsA,
-    currentPlan.months,
+  const categoriesA = currentPlan.categories.map((c) => {
+    if (c.key === "food") {
+      return {
+        ...c,
+        amount: targetGuestsA * FOOD_RATE_PER_GUEST,
+        locked: lockedKeys.includes("food"),
+      }
+    }
+    return { ...c, locked: lockedKeys.includes(c.key) }
+  })
+
+  const planA: Plan = {
+    budget: currentPlan.budget,
+    guests: targetGuestsA,
+    months: currentPlan.months,
+    categories: categoriesA,
     lockedKeys,
-  )
+  }
 
   const catDeltasA: Record<string, number> = {}
   currentPlan.categories.forEach((cat, i) => {
@@ -77,7 +88,13 @@ export function generateTradeOffScenarios(
     id: "guest-trim",
     title: "Guest List Optimization",
     badge: `Saves ${formatINR(savingsA)}`,
-    description: `Trimming guest count from ${currentPlan.guests} to ${targetGuestsA} saves ${formatINR(savingsA)} on catering at ${formatINR(FOOD_RATE_PER_GUEST)}/guest, leaving ${formatINR(remainingDeficitA)} of the ${formatINR(deficit)} deficit.`,
+    description: `Trimming guest count from ${currentPlan.guests} to ${targetGuestsA} saves ${formatINR(
+      savingsA,
+    )} on catering at ${formatINR(
+      FOOD_RATE_PER_GUEST,
+    )}/guest, leaving ${formatINR(remainingDeficitA)} of the ${formatINR(
+      deficit,
+    )} deficit to resolve.`,
     proposedPlan: planA,
     deltaBudget: 0,
     deltaGuests: -guestTrimCount,
@@ -86,84 +103,86 @@ export function generateTradeOffScenarios(
     isFullyBalanced: remainingDeficitA === 0,
     categoryDeltas: catDeltasA,
     tradeOffSummary: `Reduces catering load by ${guestTrimCount} covers while preserving venue and photography commitments.`,
-    timelineImpact:
-      "Finalize guest estimates within 10 days to confirm updated catering headcount.",
+    timelineImpact: "Finalize guest estimates within 10 days to confirm updated catering headcount.",
   }
 
   // --- SCENARIO B: Headcount Protected (Category Rebalance) ---
-  // Retains all guests (catering unchanged); rebalances unlocked flexible categories
-  const planB = { ...currentPlan }
-  const mutableCategories = planB.categories.map((c) => ({ ...c }))
+  // Retains all guests (catering unchanged); rebalances unlocked flexible categories down to floors
+  const mutableCategoriesB = currentPlan.categories.map((c) => ({
+    ...c,
+    locked: lockedKeys.includes(c.key),
+  }))
 
-  let unabsorbed = deficit
-  // Order of flexible trimming: other essentials -> decor -> photo -> venue
-  const trimOrder = ["other", "decor", "photo", "venue"]
-  for (const key of trimOrder) {
+  let unabsorbedB = deficit
+  const trimOrderB = ["other", "decor", "photo", "venue"]
+  for (const key of trimOrderB) {
     if (lockedKeys.includes(key)) continue
-    const cat = mutableCategories.find((c) => c.key === key)
+    const cat = mutableCategoriesB.find((c) => c.key === key)
     if (!cat) continue
-    const floor =
-      CATEGORY_FLOORS[(key as keyof typeof CATEGORY_FLOORS)] || 25000
+    const floor = CATEGORY_FLOORS[key as keyof typeof CATEGORY_FLOORS] || 25000
     const availableToTrim = Math.max(0, cat.amount - floor)
-    const trimAmount = Math.min(unabsorbed, availableToTrim)
+    const trimAmount = Math.min(unabsorbedB, availableToTrim)
     cat.amount -= trimAmount
-    unabsorbed -= trimAmount
-    if (unabsorbed <= 0) break
+    unabsorbedB -= trimAmount
+    if (unabsorbedB <= 0) break
   }
 
   const catDeltasB: Record<string, number> = {}
   currentPlan.categories.forEach((cat, i) => {
-    catDeltasB[cat.key] = mutableCategories[i].amount - cat.amount
+    catDeltasB[cat.key] = mutableCategoriesB[i].amount - cat.amount
   })
 
   const planBFinal: Plan = {
     ...currentPlan,
-    categories: mutableCategories,
+    categories: mutableCategoriesB,
+    lockedKeys,
   }
 
-  const savingsB = deficit - unabsorbed
+  const savingsB = deficit - unabsorbedB
   const scenarioB: TradeOffScenario = {
     id: "category-rebalance",
     title: "Headcount Protected",
     badge: "Preserve All Guests",
     description: `Keep all ${currentPlan.guests} guests and protect food at ${formatINR(
       currentPlan.categories.find((c) => c.key === "food")?.amount || 0,
-    )}. Absorbs ${formatINR(savingsB)} across secondary flexible categories.`,
+    )}. Absorbs ${formatINR(savingsB)} across secondary flexible categories${
+      unabsorbedB > 0 ? `, leaving ${formatINR(unabsorbedB)} deficit` : ""
+    }.`,
     proposedPlan: planBFinal,
     deltaBudget: 0,
     deltaGuests: 0,
     savingsAmount: savingsB,
-    remainingDeficit: unabsorbed,
-    isFullyBalanced: unabsorbed === 0,
+    remainingDeficit: unabsorbedB,
+    isFullyBalanced: unabsorbedB === 0,
     categoryDeltas: catDeltasB,
-    tradeOffSummary:
-      "Decor, photography coverage hours, or misc items are trimmed to maintain full attendance.",
-    timelineImpact:
-      "No guest deadline disruption; renegotiate quotes with decor and misc vendors.",
+    tradeOffSummary: "Decor, photography coverage hours, or misc items are trimmed to maintain full attendance.",
+    timelineImpact: "No guest deadline disruption; renegotiate quotes with decor and misc vendors.",
   }
 
   // --- SCENARIO C: Balanced Compromise ---
-  // Modest guest trim (e.g. 15 guests = ₹22,500) + mild category trim
+  // Modest guest trim (e.g. 15 guests = ₹22,500) + mild category trim to clear remainder
   const guestTrimC = Math.min(15, Math.max(5, Math.floor(guestTrimCount / 2)))
   const targetGuestsC = currentPlan.guests - guestTrimC
   const guestSavingsC = guestTrimC * FOOD_RATE_PER_GUEST
   const deficitAfterGuestC = Math.max(0, deficit - guestSavingsC)
 
-  const planCBase = adaptPlan(
-    currentPlan.budget,
-    targetGuestsC,
-    currentPlan.months,
-    lockedKeys,
-  )
-  const mutableCategoriesC = planCBase.categories.map((c) => ({ ...c }))
+  const mutableCategoriesC = currentPlan.categories.map((c) => {
+    if (c.key === "food") {
+      return {
+        ...c,
+        amount: targetGuestsC * FOOD_RATE_PER_GUEST,
+        locked: lockedKeys.includes("food"),
+      }
+    }
+    return { ...c, locked: lockedKeys.includes(c.key) }
+  })
 
   let unabsorbedC = deficitAfterGuestC
-  for (const key of ["other", "decor", "photo"]) {
+  for (const key of ["other", "decor", "photo", "venue"]) {
     if (lockedKeys.includes(key)) continue
     const cat = mutableCategoriesC.find((c) => c.key === key)
     if (!cat) continue
-    const floor =
-      CATEGORY_FLOORS[(key as keyof typeof CATEGORY_FLOORS)] || 25000
+    const floor = CATEGORY_FLOORS[key as keyof typeof CATEGORY_FLOORS] || 25000
     const availableToTrim = Math.max(0, cat.amount - floor)
     const trimAmount = Math.min(unabsorbedC, availableToTrim)
     cat.amount -= trimAmount
@@ -180,7 +199,9 @@ export function generateTradeOffScenarios(
     id: "balanced",
     title: "Balanced Compromise",
     badge: "Balanced",
-    description: `Moderate reduction of ${guestTrimC} guests saves ${formatINR(guestSavingsC)}, while gentle category adjustments absorb remaining pressure.`,
+    description: `Moderate reduction of ${guestTrimC} guests saves ${formatINR(
+      guestSavingsC,
+    )}, while gentle category adjustments absorb remaining pressure.`,
     proposedPlan: {
       budget: currentPlan.budget,
       guests: targetGuestsC,
@@ -194,10 +215,8 @@ export function generateTradeOffScenarios(
     remainingDeficit: unabsorbedC,
     isFullyBalanced: unabsorbedC === 0,
     categoryDeltas: catDeltasC,
-    tradeOffSummary:
-      "Mild cuts shared between guest count and non-essential decor.",
-    timelineImpact:
-      "Standard task flow remains viable with minimal vendor friction.",
+    tradeOffSummary: "Mild cuts shared between guest count and non-essential decor.",
+    timelineImpact: "Standard task flow remains viable with minimal vendor friction.",
   }
 
   return [scenarioA, scenarioB, scenarioC]

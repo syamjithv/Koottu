@@ -1200,6 +1200,9 @@ function AdaptDrawer({
   const [guests, setGuests] = useState(current.guests)
   const [months, setMonths] = useState(current.months)
   const [activeLockedKeys, setActiveLockedKeys] = useState<string[]>(lockedKeys)
+  const [selectedScenarioPlan, setSelectedScenarioPlan] = useState<Plan | null>(
+    null,
+  )
   const [closing, setClosing] = useState<"accept" | "cancel" | null>(null)
 
   // Natural language plan adjustment state
@@ -1207,11 +1210,11 @@ function AdaptDrawer({
   const [intentLoading, setIntentLoading] = useState(false)
   const [intentSummary, setIntentSummary] = useState<string | null>(null)
 
-  // Synchronous recalculation with locked categories support
-  const proposal = useMemo(
-    () => adaptPlan(budget, guests, months, activeLockedKeys),
-    [budget, guests, months, activeLockedKeys],
-  )
+  // Synchronous recalculation with locked categories support and explicit scenario proposal
+  const proposal = useMemo(() => {
+    if (selectedScenarioPlan) return selectedScenarioPlan
+    return adaptPlan(budget, guests, months, activeLockedKeys)
+  }, [budget, guests, months, activeLockedKeys, selectedScenarioPlan])
   const proposedSpend = sumPlan(proposal)
   const balance = budget - proposedSpend
   const changed =
@@ -1440,7 +1443,10 @@ function AdaptDrawer({
               max="1200000"
               step="10000"
               value={budget}
-              onChange={(e) => setBudget(Number(e.target.value))}
+              onChange={(e) => {
+                setSelectedScenarioPlan(null)
+                setBudget(Number(e.target.value))
+              }}
             />
           </label>
           <label>
@@ -1450,14 +1456,20 @@ function AdaptDrawer({
               min="20"
               max="500"
               value={guests}
-              onChange={(e) => setGuests(Number(e.target.value))}
+              onChange={(e) => {
+                setSelectedScenarioPlan(null)
+                setGuests(Number(e.target.value))
+              }}
             />
           </label>
           <label>
             <span>Time remaining</span>
             <select
               value={months}
-              onChange={(e) => setMonths(Number(e.target.value))}
+              onChange={(e) => {
+                setSelectedScenarioPlan(null)
+                setMonths(Number(e.target.value))
+              }}
             >
               {[1, 2, 3, 4, 5, 6].map((value) => (
                 <option key={value} value={value}>
@@ -1470,6 +1482,7 @@ function AdaptDrawer({
             className="reset-link"
             type="button"
             onClick={() => {
+              setSelectedScenarioPlan(null)
               setBudget(originalPlan.budget)
               setGuests(originalPlan.guests)
               setMonths(originalPlan.months)
@@ -1582,6 +1595,7 @@ function AdaptDrawer({
                           setBudget(sc.proposedPlan.budget)
                           setGuests(sc.proposedPlan.guests)
                           setMonths(sc.proposedPlan.months)
+                          setSelectedScenarioPlan(sc.proposedPlan)
                         }}
                       >
                         Preview & Apply {sc.title} →

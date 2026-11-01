@@ -123,11 +123,32 @@ test("handleApiRequest rejects out-of-range budget with HTTP 422", async () => {
   assert.match(getBody().error, /Budget must be a number/i)
 })
 
-test("handleApiRequest rejects out-of-range guest count with HTTP 422", async () => {
-  const payload = JSON.stringify({ budget: 800000, guests: 10, months: 4 })
-  const { req, res, getStatusCode, getBody } = createMockHttp(payload)
+test("handleApiRequest rejects oversized payload with HTTP 413", async () => {
+  const hugePayload = JSON.stringify({
+    budget: 800000,
+    guests: 200,
+    months: 4,
+    context: { requirements: "A".repeat(15 * 1024) }, // 15 KB
+  })
+  const { req, res, getStatusCode, getBody } = createMockHttp(hugePayload)
   await handleApiRequest(req, res)
 
-  assert.equal(getStatusCode(), 422)
-  assert.match(getBody().error, /Guests must be an integer between 20 and 500/i)
+  assert.equal(getStatusCode(), 413)
+  assert.match(getBody().error, /Payload Too Large/i)
+})
+
+test("handleApiRequest rejects non-POST method with HTTP 405", async () => {
+  const { req, res, getStatusCode, getBody } = createMockHttp("", "GET")
+  await handleApiRequest(req, res)
+
+  assert.equal(getStatusCode(), 405)
+  assert.match(getBody().error, /Method Not Allowed/i)
+})
+
+test("handleApiRequest rejects malformed JSON with HTTP 400", async () => {
+  const { req, res, getStatusCode, getBody } = createMockHttp("INVALID_JSON{")
+  await handleApiRequest(req, res)
+
+  assert.equal(getStatusCode(), 400)
+  assert.match(getBody().error, /Invalid JSON/i)
 })

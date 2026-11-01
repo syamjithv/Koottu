@@ -13,6 +13,25 @@ import * as dotenv from "dotenv"
 
 dotenv.config()
 
+// Basic in-memory rate limiting safeguard for local development / single-instance nodes
+// NOTE: In distributed or multi-instance production environments, distributed stores (e.g. Redis) are required.
+const rateLimitMap = new Map<string, number[]>()
+const RATE_LIMIT_WINDOW_MS = 60 * 1000
+const MAX_REQUESTS_PER_WINDOW = 20
+
+function checkRateLimit(clientIp: string): boolean {
+  const now = Date.now()
+  const timestamps = rateLimitMap.get(clientIp) || []
+  const valid = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
+  if (valid.length >= MAX_REQUESTS_PER_WINDOW) {
+    rateLimitMap.set(clientIp, valid)
+    return false
+  }
+  valid.push(now)
+  rateLimitMap.set(clientIp, valid)
+  return true
+}
+
 export async function handleVendorQuoteRequest(
   req: IncomingMessage,
   res: ServerResponse,
@@ -34,9 +53,37 @@ export async function handleVendorQuoteRequest(
     return
   }
 
+  const clientIp =
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0] ||
+    req.socket.remoteAddress ||
+    "unknown"
+  if (!checkRateLimit(clientIp)) {
+    res.writeHead(429)
+    res.end(
+      JSON.stringify({
+        error: "Too many requests. Please wait a minute before requesting more quote audits.",
+      }),
+    )
+    return
+  }
+
+  // Enforce 10KB request size limit
+  const MAX_BYTES = 10 * 1024
   let body = ""
+  let receivedBytes = 0
+
   try {
     for await (const chunk of req) {
+      receivedBytes += chunk.length
+      if (receivedBytes > MAX_BYTES) {
+        res.writeHead(413)
+        res.end(
+          JSON.stringify({
+            error: "Payload Too Large: maximum allowed body is 10KB.",
+          }),
+        )
+        return
+      }
       body += chunk
     }
   } catch {

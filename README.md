@@ -184,9 +184,20 @@ npm install
 ### 3. Run Automated Test Suite
 
 ```bash
+# On Linux / macOS / Bash:
 npm test
+
+# On Windows PowerShell:
+npm.cmd run test
 ```
-*Executes all 24 unit and integration tests across the budget engine, timeline DAG, vendor quotation engine, persistence, and API handlers in <1.1s.*
+*Executes all 33 unit and integration tests across 8 test suites (budget engine, trade-off scenarios, timeline DAG & CPM, vendor parser, persistence & migration, and server API handlers) in ~1.1s.*
+
+### 4. Run Competition QA Sprint Verification
+
+```bash
+node scripts/e2e-qa-sprint.mjs
+```
+*Executes 41 end-to-end integration and mathematical assertions verifying zero floating-point penny drift, category locks, exact ₹7,000 residual deficit exposure, contract auditing, DAG critical paths, and HTTP security boundaries.*
 
 ### 4. Start Local Development Server
 
@@ -224,10 +235,32 @@ npm run build
 
 ---
 
-## 7. Security & Production Deployment
+## 7. Security, Resilience & Production Deployment
 
-- **API Key Isolation**: `GEMINI_API_KEY` is loaded exclusively in Node.js server environments and is never prefixed with `VITE_` or sent to the client.
-- **Payload Restrictions**: Request size is limited to 10KB to prevent memory exhaustion.
-- **Numerical Validation**: All numeric inputs are validated server-side (Budget: ₹3L–₹5Cr, Guests: 20–500, Months: 1–12).
-- **Graceful Fallbacks**: If the Gemini API experiences temporary 503 high demand or network latency, the endpoints return verified deterministic recommendations (`status: "fallback"`) ensuring zero UI disruption.
+### Secret & Key Isolation
+- `GEMINI_API_KEY` is loaded exclusively inside Node.js server environments (`src/server/` and `api/`). It is **never** prefixed with `VITE_` and never bundled into client JavaScript.
+- Audited via automated AST/bundle string searches: client production bundles contain zero references to API keys or private credentials.
+- `.env` is strictly git-ignored; a sanitized `.env.example` template is provided for judges and contributors.
+
+### Request Validation & Boundary Protection
+- **Request Size Limiting**: Hard-capped at **10KB** per request on all API endpoints (`/api/recommendations`, `/api/plan-intent`, `/api/vendor-quote`) to prevent denial-of-service via large payloads.
+- **Strict Bounds Validation**: Numerical parameters are validated server-side (Budget: ₹3L–₹5Cr, Guests: 20–500, Planning Window: 1–12 months). Non-POST requests are rejected with HTTP 405 Method Not Allowed; malformed JSON returns HTTP 400.
+- **In-Memory Rate Limiting vs. Production Distributed Architectures**:
+  - The built-in rate limiter utilizes an in-memory sliding window (15–20 requests/minute per client IP), ideal for local development, demonstrations, and single-node instances.
+  - *Production Limitation Notice*: In distributed or serverless environments (e.g. AWS Lambda, Vercel Edge/Serverless), individual function invocations run in stateless worker instances that do not share memory. For high-scale production deployments, a distributed store such as Redis or Upstash is recommended to coordinate rate limiting across regions.
+
+### Quota Resilience & Graceful Fallbacks
+- If Google Gemini returns HTTP 503, high network latency (>120s timeout), or `RESOURCE_EXHAUSTED` (Google AI Studio Free Tier quota limit of 20 requests/day on `gemini-3.8-flash`), the server intercepts the exception gracefully.
+- Instead of failing or displaying broken UI states, the system returns a verified deterministic response with `status: "fallback"`, `isAiGenerated: false`, and an informational badge. The user receives 100% accurate ground-truth calculations and recommendations without interruption.
+
+### Production Deployment (Vercel)
+The repository is production-ready for Vercel deployment:
+- `vercel.json` configures serverless routing:
+  - `/api/(.*)` routes to Node.js serverless functions in `api/$1.ts`.
+  - Client-side routes rewrite to `/index.html` for single-page app navigation.
+- To deploy:
+  ```bash
+  npx vercel --prod
+  ```
+  Set `GEMINI_API_KEY` in the Vercel Project Settings > Environment Variables.
 
