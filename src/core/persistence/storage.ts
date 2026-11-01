@@ -14,8 +14,9 @@ import type {
 } from "../types.ts"
 import { originalPlan, adaptPlan } from "../budget/budgetEngine.ts"
 
-export const STORAGE_KEY = "koottu_plan_v2"
-export const CURRENT_SCHEMA_VERSION = 2
+export const STORAGE_KEY = "koottu_plan_v3"
+export const LEGACY_STORAGE_KEY = "koottu_plan_v2"
+export const CURRENT_SCHEMA_VERSION = 3
 
 export const DEFAULT_SETUP: Setup = {
   occasion: "Wedding",
@@ -29,13 +30,21 @@ export const DEFAULT_SETUP: Setup = {
 }
 
 /**
- * Load persisted app state from localStorage
+ * Load persisted app state from localStorage with v2 -> v3 automatic migration
  */
 export function loadStoredAppState(): StoredAppState | null {
   if (typeof window === "undefined" || !window.localStorage) return null
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
+    let raw = window.localStorage.getItem(STORAGE_KEY)
+    let migratedFromV2 = false
+
+    // Check legacy v2 key if v3 is not found
+    if (!raw) {
+      raw = window.localStorage.getItem(LEGACY_STORAGE_KEY)
+      if (raw) migratedFromV2 = true
+    }
+
     if (!raw) return null
 
     const parsed = JSON.parse(raw)
@@ -59,19 +68,26 @@ export function loadStoredAppState(): StoredAppState | null {
       )
     }
 
-    return {
+    const migratedState: StoredAppState = {
       version: CURRENT_SCHEMA_VERSION,
       lastUpdated: parsed.lastUpdated || new Date().toISOString(),
       setup: parsed.setup || DEFAULT_SETUP,
       plan: parsed.plan,
       accepted: Boolean(parsed.accepted),
       lockedKeys: Array.isArray(parsed.lockedKeys) ? parsed.lockedKeys : [],
-      vendorQuotes: Array.isArray(parsed.vendorQuotes)
-        ? parsed.vendorQuotes
-        : [],
+      vendorQuotes: Array.isArray(parsed.vendorQuotes) ? parsed.vendorQuotes : [],
       customTaskStatuses: parsed.customTaskStatuses || {},
       history: Array.isArray(parsed.history) ? parsed.history : [],
+      taskAssignees: parsed.taskAssignees || {},
+      unifiedPlan: parsed.unifiedPlan,
     }
+
+    // If migrated from v2, save immediately to v3 key
+    if (migratedFromV2) {
+      saveStoredAppState(migratedState)
+    }
+
+    return migratedState
   } catch (err) {
     console.warn(
       "[KOOTTU Storage]: Failed to parse local state, recovering defaults",
@@ -137,3 +153,61 @@ export function importPlanJSON(jsonStr: string): StoredAppState | null {
     return null
   }
 }
+
+/**
+ * Generate a clean, structured printable celebration summary for elders and coordinators
+ */
+export function generatePrintableCelebrationSummary(state: StoredAppState): string {
+  const s = state.setup
+  const p = state.plan
+  const totalAllocated = p.categories.reduce((acc, c) => acc + c.amount, 0)
+  const balance = s.budget - totalAllocated
+
+  return `=====================================================================
+KOOTTU — CELEBRATION MASTER PLAN SUMMARY
+Generated: ${new Date().toLocaleDateString("en-IN", { dateStyle: "long" })}
+=====================================================================
+
+EVENT OVERVIEW
+• Occasion: ${s.occasion}
+• Location: ${s.location || "Kerala"}
+• Planning Window: ${s.months} months${s.date ? ` (Event Date: ${s.date})` : ""}
+• Expected Attendance: ${s.guests} guests
+• Total Available Budget: ₹${s.budget.toLocaleString("en-IN")}
+• Total Planned Allocations: ₹${totalAllocated.toLocaleString("en-IN")}
+• Net Financial Balance: ${balance < 0 ? `Deficit of ₹${Math.abs(balance).toLocaleString("en-IN")} (Requires Trade-Off)` : `Cushion of ₹${balance.toLocaleString("en-IN")}`}
+
+PROTECTED PRIORITIES & REQUIREMENTS
+• Priorities: ${s.priorities.join(", ") || "Hospitality & Traditional Feast"}
+• Host Notes: "${s.requirements || "Preserve authentic cultural standards."}"
+
+FINANCIAL ALLOCATION BREAKDOWN
+${p.categories
+  .map(
+    (c) =>
+      `• ${c.name.padEnd(24, " ")}: ₹${c.amount.toLocaleString("en-IN")}${c.locked ? " [LOCKED]" : ""}${c.priority ? " [PROTECTED]" : ""}`,
+  )
+  .join("\n")}
+
+VENDOR STATUS & COMMITMENTS
+${
+  state.vendorQuotes.length > 0
+    ? state.vendorQuotes
+        .map(
+          (q) =>
+            `• ${q.category.toUpperCase().padEnd(10, " ")} | ${q.vendorName} | Quoted: ₹${q.quotedAmount.toLocaleString("en-IN")} (${q.gstIncluded ? "GST Included" : `+${q.gstRatePercent}% GST`}) | Status: ${q.status.toUpperCase()}`,
+        )
+        .join("\n")
+    : "• No external vendor quotations registered yet."
+}
+
+KEY TIMELINE MILESTONES
+${Object.entries(state.customTaskStatuses)
+  .map(([taskId, status]) => `• ${taskId}: ${status}`)
+  .join("\n") || "• Timeline tasks in progress according to CPM Critical Path."}
+
+=====================================================================
+KOOTTU • Make room for what matters • Deterministic Event Intelligence
+=====================================================================`
+}
+

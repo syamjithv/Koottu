@@ -2,6 +2,8 @@ import type { Plugin } from "vite"
 import { handleApiRequest } from "./recommendationsHandler.ts"
 import { handlePlanIntentRequest } from "./intentHandler.ts"
 import { handleVendorQuoteRequest } from "./vendorQuoteHandler.ts"
+import { handleEventIdeasRequest } from "./ideationHandler.ts"
+import { handlePlanningAssistantRequest } from "./assistantHandler.ts"
 
 export function recommendationsApiPlugin(): Plugin {
   return {
@@ -44,6 +46,18 @@ export function recommendationsApiPlugin(): Plugin {
         // Vendor Quote analysis endpoint
         if (req.url === "/api/vendor-quote") {
           await handleVendorQuoteRequest(req, res)
+          return
+        }
+
+        // Creative Event Ideas endpoint
+        if (req.url === "/api/event-ideas") {
+          await handleEventIdeasRequest(req, res)
+          return
+        }
+
+        // Grounded Conversational Planning Assistant endpoint
+        if (req.url === "/api/planning-assistant") {
+          await handlePlanningAssistantRequest(req, res)
           return
         }
 

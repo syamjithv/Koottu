@@ -13,6 +13,12 @@ import {
   type TradeOffScenario,
   type StoredAppState,
   type TaskStatus,
+  type UnifiedEventPlan,
+  type ProactiveInsight,
+  type CelebrationReadiness,
+  type RunSheetItem,
+  type StressTestScenario,
+  type EventIdea,
   generateTradeOffScenarios,
   analyzeScheduleFeasibility,
   SAMPLE_QUOTES,
@@ -22,6 +28,19 @@ import {
   saveStoredAppState,
   clearStoredAppState,
   DEFAULT_SETUP,
+  createInitialUnifiedPlan,
+  recalculateUnifiedPlan,
+  simulateDecisionImpact,
+  generateProactiveInsights,
+  calculateCelebrationReadiness,
+  runBudgetStressTests,
+  compareCategoryQuotes,
+  generateVendorInquiryDraft,
+  generateMilestonesIcs,
+  generateRunSheetIcs,
+  DEFAULT_CULTURAL_IDEAS,
+  findTemplateByOccasion,
+  KERALA_WEDDING_TEMPLATE,
 } from "./data.ts"
 
 type Stage = "landing" | "setup" | "workspace"
@@ -599,15 +618,21 @@ function SetupFlow({
 function BudgetPlanner({
   plan,
   lockedKeys = [],
+  contingencyPercent = 5,
+  onUpdateContingency,
   onToggleLock,
 }: {
   plan: Plan
   lockedKeys?: string[]
+  contingencyPercent?: number
+  onUpdateContingency?: (pct: number) => void
   onToggleLock?: (key: string) => void
 }) {
   const [selected, setSelected] = useState(plan.categories[1].key)
+  const [showStressTests, setShowStressTests] = useState(false)
   const spent = sumPlan(plan)
-  const remaining = plan.budget - spent
+  const contingencyReserve = Math.round((plan.budget * contingencyPercent) / 100)
+  const remaining = plan.budget - (spent + contingencyReserve)
   const detail =
     plan.categories.find((item) => item.key === selected) || plan.categories[0]
   const colors = ["forest", "coral", "saffron", "sage", "sand"]
@@ -615,6 +640,52 @@ function BudgetPlanner({
   // Track previous category amounts to highlight only genuinely changed allocations
   const previousAmounts = useRef<Record<string, number>>({})
   const [changedKeys, setChangedKeys] = useState<string[]>([])
+
+  const stressScenarios = useMemo(() => {
+    const dummyPlan: UnifiedEventPlan = {
+      id: "view-plan",
+      version: 3,
+      createdAt: "",
+      lastUpdated: "",
+      identity: {
+        title: "",
+        occasion: "Wedding",
+        date: "",
+        months: plan.months,
+        location: "",
+        guests: plan.guests,
+        budget: plan.budget,
+        priorities: [],
+        requirements: "",
+      },
+      financials: {
+        totalBudget: plan.budget,
+        totalAllocated: spent,
+        totalActualSpent: 0,
+        contingencyReserve,
+        unallocatedAmount: Math.max(0, remaining),
+        netBalance: remaining,
+        isDeficit: remaining < 0,
+        deficitAmount: remaining < 0 ? Math.abs(remaining) : 0,
+        foodPerPerson: 1500,
+      },
+      contingency: { percent: contingencyPercent, reserveAmount: contingencyReserve, isManual: false },
+      categories: plan.categories.map((c) => ({ ...c })),
+      lockedKeys,
+      tradeOffScenarios: [],
+      tasks: [],
+      timelineFeasibility: { isFeasible: true, totalDurationDays: 69, availableDays: 120, slackDays: 51, criticalPathTaskIds: [], cycleDetected: false, conflicts: [], summary: "" },
+      vendors: [],
+      acceptedQuotes: {},
+      runSheet: [],
+      ideas: [],
+      readiness: { overallScore: 80, budgetScore: 20, timelineScore: 25, vendorScore: 15, taskScore: 20, riskDeductions: 0, reasons: [], summary: "" },
+      insights: [],
+      history: [],
+      planningStatus: "configured",
+    }
+    return runBudgetStressTests(dummyPlan)
+  }, [plan, spent, contingencyReserve, remaining, contingencyPercent, lockedKeys])
 
   useEffect(() => {
     const changed: string[] = []
@@ -759,6 +830,65 @@ function BudgetPlanner({
           )
         })}
       </div>
+
+      <div className="contingency-bar">
+        <div>
+          <strong style={{ color: "var(--ink)", display: "block" }}>
+            Contingency Reserve: {contingencyPercent}% ({formatINR(contingencyReserve)})
+          </strong>
+          <span style={{ fontSize: 10, color: "var(--muted)" }}>
+            Emergency reserve buffer for unexpected food inflation or monsoon setups.
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <input
+            type="range"
+            min="0"
+            max="10"
+            step="1"
+            value={contingencyPercent}
+            onChange={(e) =>
+              onUpdateContingency && onUpdateContingency(Number(e.target.value))
+            }
+            aria-label="Contingency percentage slider"
+            style={{ width: 100 }}
+          />
+          <span style={{ fontWeight: 700, minWidth: 30, textAlign: "right" }}>
+            {contingencyPercent}%
+          </span>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 14 }}>
+        <button
+          type="button"
+          className="scenario-apply-btn"
+          style={{ width: "100%", textAlign: "center", padding: "8px 12px" }}
+          onClick={() => setShowStressTests(!showStressTests)}
+        >
+          {showStressTests ? "▲ Hide" : "⚡ Simulate"} Budget Stress Scenarios (+20% Guests, Venue Surge, Monsoon Emergency)
+        </button>
+
+        {showStressTests && (
+          <div className="stress-grid" aria-live="polite">
+            {stressScenarios.map((sc) => (
+              <div key={sc.id} className="stress-card">
+                <h4>{sc.title}</h4>
+                <p>{sc.description}</p>
+                <div>
+                  <small style={{ color: "var(--muted)", display: "block" }}>Calculated Impact:</small>
+                  <span className="stress-deficit">
+                    {sc.resultingDeficit > 0 ? `Deficit: -${formatINR(sc.resultingDeficit)}` : "Balanced"}
+                  </span>
+                </div>
+                <div style={{ marginTop: 4, fontSize: 10, color: "var(--muted)" }}>
+                  {sc.impactSummary}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   )
 }
@@ -766,11 +896,15 @@ function BudgetPlanner({
 function VendorQuotesSection({
   plan,
   quotes,
+  acceptedQuotes = {},
   onAddQuote,
+  onAcceptQuote,
 }: {
   plan: Plan
   quotes: VendorQuote[]
+  acceptedQuotes?: Record<string, string>
   onAddQuote: (quote: VendorQuote) => void
+  onAcceptQuote?: (quote: VendorQuote) => void
 }) {
   const [activeSampleIdx, setActiveSampleIdx] = useState<number>(0)
   const [rawText, setRawText] = useState(SAMPLE_QUOTES[0].rawText)
@@ -783,11 +917,51 @@ function VendorQuotesSection({
     tips: string[]
   } | null>(null)
   const [loadingAi, setLoadingAi] = useState(false)
+  const [showComparisonMatrix, setShowComparisonMatrix] = useState(false)
+  const [showInquiryModal, setShowInquiryModal] = useState(false)
+  const [copiedDraft, setCopiedDraft] = useState(false)
 
   const comparison = useMemo(
     () => compareQuoteToPlan(analyzedQuote, plan),
     [analyzedQuote, plan],
   )
+
+  const catAllocated = useMemo(() => {
+    return plan.categories.find((c) => c.key === categoryHint)?.amount || 300000
+  }, [plan, categoryHint])
+
+  const sampleQuotesObjects = useMemo<VendorQuote[]>(() => {
+    return SAMPLE_QUOTES.map((sq, i) => ({
+      id: `sample-q-${i}`,
+      vendorName: sq.vendorName,
+      category: sq.category,
+      quotedAmount: sq.baseCost,
+      gstRatePercent: sq.gstPercent,
+      gstIncluded: sq.gstIncluded,
+      advancePaymentPercent: sq.advancePercent,
+      advanceAmount: Math.round((sq.baseCost * sq.advancePercent) / 100),
+      cancellationPolicy: sq.cancellationPolicy,
+      riskFlags: sq.riskFlags,
+      includedServices: sq.includedServices,
+      status: "reviewed",
+    }))
+  }, [])
+
+  const matrix = useMemo(() => {
+    return compareCategoryQuotes(sampleQuotesObjects, catAllocated)
+  }, [sampleQuotesObjects, catAllocated])
+
+  const inquiryDraft = useMemo(() => {
+    return generateVendorInquiryDraft({
+      vendorName: analyzedQuote.vendorName,
+      category: analyzedQuote.category.toUpperCase(),
+      occasion: "Celebration",
+      date: `${plan.months}-month planning window`,
+      location: "Kochi, Kerala",
+      guestCount: plan.guests,
+      budgetEstimate: catAllocated,
+    })
+  }, [analyzedQuote, plan, catAllocated])
 
   const handleSelectSample = (idx: number) => {
     setActiveSampleIdx(idx)
@@ -829,6 +1003,14 @@ function VendorQuotesSection({
       setLoadingAi(false)
     }
   }
+
+  const handleCopyInquiry = () => {
+    navigator.clipboard?.writeText(inquiryDraft)
+    setCopiedDraft(true)
+    window.setTimeout(() => setCopiedDraft(false), 2000)
+  }
+
+  const isAccepted = acceptedQuotes[analyzedQuote.category] === analyzedQuote.id
 
   return (
     <section className="workspace-section vendor-section" id="quotes">
@@ -884,16 +1066,54 @@ function VendorQuotesSection({
             <span style={{ fontSize: 10, color: "var(--muted)" }}>
               Category: <b>{analyzedQuote.category.toUpperCase()}</b>
             </span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                type="button"
+                className="insight-action-btn"
+                onClick={() => setShowInquiryModal(!showInquiryModal)}
+              >
+                💬 {showInquiryModal ? "Hide" : "Inquiry Draft"}
+              </button>
+              <button
+                type="button"
+                className="button primary green"
+                style={{ padding: "9px 15px", fontSize: 11 }}
+                disabled={loadingAi}
+                onClick={handleAudit}
+              >
+                {loadingAi
+                  ? "✦ Auditing contract..."
+                  : "✦ Audit with Gemini 3.8 Flash"}
+              </button>
+            </div>
+          </div>
+
+          {showInquiryModal && (
+            <div style={{ background: "var(--paper2)", border: "1px solid var(--line)", padding: 12, borderRadius: 4, marginTop: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <strong style={{ fontSize: 11 }}>Kerala Vendor Inquiry Draft (WhatsApp/Email)</strong>
+                <button
+                  type="button"
+                  className="insight-action-btn"
+                  onClick={handleCopyInquiry}
+                >
+                  {copiedDraft ? "✓ Copied!" : "Copy Text"}
+                </button>
+              </div>
+              <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: 10, color: "var(--ink)", margin: 0, lineHeight: 1.4 }}>
+                {inquiryDraft}
+              </pre>
+            </div>
+          )}
+
+          <div style={{ marginTop: 12 }}>
             <button
               type="button"
-              className="button primary green"
-              style={{ padding: "9px 15px", fontSize: 11 }}
-              disabled={loadingAi}
-              onClick={handleAudit}
+              className="scenario-apply-btn"
+              style={{ width: "100%", padding: "7px 10px" }}
+              onClick={() => setShowComparisonMatrix(!showComparisonMatrix)}
             >
-              {loadingAi
-                ? "✦ Auditing contract..."
-                : "✦ Audit with Gemini 3.8 Flash"}
+              {showComparisonMatrix ? "▲ Hide Comparison" : "📊 Compare 3 Vendor Quotes in Category"}
             </button>
           </div>
         </div>
@@ -904,15 +1124,31 @@ function VendorQuotesSection({
               <span className="kicker">{analyzedQuote.category} quotation</span>
               <h3>{analyzedQuote.vendorName}</h3>
             </div>
-            <span
-              className={`variance-badge ${
-                comparison.isOverBudget ? "over-budget" : "under-budget"
-              }`}
-            >
-              {comparison.isOverBudget
-                ? `+${formatINR(comparison.variance)} Over Budget`
-                : `${formatINR(Math.abs(comparison.variance))} Under Budget`}
-            </span>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+              <span
+                className={`variance-badge ${
+                  comparison.isOverBudget ? "over-budget" : "under-budget"
+                }`}
+              >
+                {comparison.isOverBudget
+                  ? `+${formatINR(comparison.variance)} Over Budget`
+                  : `${formatINR(Math.abs(comparison.variance))} Under Budget`}
+              </span>
+              {onAcceptQuote && (
+                <button
+                  type="button"
+                  className="insight-action-btn"
+                  style={{
+                    background: isAccepted ? "var(--forest)" : "none",
+                    color: isAccepted ? "#fff" : "var(--ink)",
+                    borderColor: isAccepted ? "var(--forest)" : "var(--line)",
+                  }}
+                  onClick={() => onAcceptQuote(analyzedQuote)}
+                >
+                  {isAccepted ? "✓ Contracted" : `Accept Quote for ${analyzedQuote.category} →`}
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="quote-stats-grid">
@@ -997,6 +1233,69 @@ function VendorQuotesSection({
           )}
         </div>
       </div>
+
+      {showComparisonMatrix && (
+        <div style={{ marginTop: 16, background: "var(--card)", border: "1px solid var(--line)", padding: 16, borderRadius: 4 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div>
+              <strong style={{ fontSize: 13, color: "var(--ink)" }}>
+                3-Quote Value Comparison ({categoryHint.toUpperCase()} Category)
+              </strong>
+              <small style={{ display: "block", color: "var(--muted)" }}>
+                Category budget allocated: {formatINR(catAllocated)}
+              </small>
+            </div>
+            <span className="prototype-label">Transparent Value Scoring (0-100)</span>
+          </div>
+
+          <p style={{ fontSize: 11, color: "var(--forest)", background: "var(--paper2)", padding: "6px 10px", borderRadius: 3, margin: "6px 0 12px" }}>
+            💡 <b>Engine Analysis:</b> {matrix.transparentReasoning}
+          </p>
+
+          <table className="quote-compare-table">
+            <thead>
+              <tr>
+                <th>Vendor</th>
+                <th>Base Quote</th>
+                <th>GST Status</th>
+                <th>Effective Total</th>
+                <th>Advance %</th>
+                <th>Budget Variance</th>
+                <th>Value Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {matrix.quotes.map((q) => (
+                <tr key={q.quoteId} className={q.quoteId === matrix.recommendedQuoteId ? "is-best" : ""}>
+                  <td>
+                    <strong>{q.vendorName}</strong>
+                    {q.quoteId === matrix.recommendedQuoteId && (
+                      <span className="critical-tag" style={{ background: "var(--forest)", color: "#fff", marginLeft: 6 }}>
+                        Best Value
+                      </span>
+                    )}
+                  </td>
+                  <td>{formatINR(q.baseCost)}</td>
+                  <td>{q.gstAmount === 0 ? "Included" : `+${q.gstPercent}% (${formatINR(q.gstAmount)})`}</td>
+                  <td><strong>{formatINR(q.effectiveTotal)}</strong></td>
+                  <td>{q.advancePercent}% ({formatINR(q.advanceAmount)})</td>
+                  <td style={{ color: q.isUnderBudget ? "var(--forest)" : "var(--coral)", fontWeight: 600 }}>
+                    {q.isUnderBudget ? `-${formatINR(Math.abs(q.variance))}` : `+${formatINR(q.variance)}`}
+                  </td>
+                  <td>
+                    <span style={{ fontWeight: 700, color: "var(--forest)" }}>
+                      {q.valueScore}/100
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div style={{ marginTop: 12, fontSize: 10, color: "var(--muted)", fontStyle: "italic", textAlign: "center" }}>
+        * Illustrative Kerala market rate quotations for student demonstration. In actual planning, always verify real-world contractor availability and GST compliance.
+      </div>
     </section>
   )
 }
@@ -1073,11 +1372,15 @@ function EventMap({ location }: { location: string }) {
 function Timeline({
   months,
   customStatuses = {},
+  taskAssignees = {},
   onToggleStatus,
+  onAssignTask,
 }: {
   months: number
   customStatuses?: Record<string, TaskStatus>
+  taskAssignees?: Record<string, string>
   onToggleStatus?: (taskId: string) => void
+  onAssignTask?: (taskId: string, assignee: string) => void
 }) {
   const tasks = getTimeline(months, customStatuses)
   const feasibility = useMemo(
@@ -1086,6 +1389,17 @@ function Timeline({
   )
   const previousMonths = useRef(months)
   const [changedIndices, setChangedIndices] = useState<number[]>([])
+
+  const handleDownloadMilestonesIcs = () => {
+    const icsContent = generateMilestonesIcs(tasks, undefined, "KOOTTU Celebration")
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "celebration-milestones.ics"
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   useEffect(() => {
     if (previousMonths.current !== months) {
@@ -1119,6 +1433,14 @@ function Timeline({
           <h2>The path to the celebration.</h2>
         </div>
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button
+            type="button"
+            className="insight-action-btn"
+            onClick={handleDownloadMilestonesIcs}
+            title="Download milestones as RFC 5545 .ics calendar file"
+          >
+            📅 Download .ics
+          </button>
           <span
             className={`feasibility-badge ${
               feasibility.isFeasible ? "is-feasible" : "is-compressed"
@@ -1164,6 +1486,9 @@ function Timeline({
                   Depends on: <b>{task.dependency.replace("After ", "")}</b>
                 </p>
               )}
+              <div style={{ marginTop: 4, fontSize: 10, color: "var(--muted)" }}>
+                👤 Assigned: <b>{taskAssignees[task.id] || task.assignee || "Family Coordinator"}</b>
+              </div>
             </div>
             <button
               type="button"
@@ -1178,6 +1503,413 @@ function Timeline({
         ))}
       </div>
     </section>
+  )
+}
+
+function EventDayRunSheet({
+  runSheet,
+  eventDate,
+  occasion,
+}: {
+  runSheet: RunSheetItem[]
+  eventDate?: string
+  occasion?: string
+}) {
+  const [items, setItems] = useState<RunSheetItem[]>(runSheet)
+
+  const handleDownloadRunSheetIcs = () => {
+    const icsData = generateRunSheetIcs(items, eventDate, `${occasion || "Celebration"} Day`)
+    const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "celebration-day-runsheet.ics"
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const toggleStatus = (id: string) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status: item.status === "Completed" ? "Pending" : "Completed",
+            }
+          : item,
+      ),
+    )
+  }
+
+  return (
+    <section className="workspace-section runsheet-section" id="runsheet">
+      <div className="section-heading">
+        <div>
+          <span className="kicker">Day-of Execution · Auspicious Timings</span>
+          <h2>Chronological event-day run sheet.</h2>
+        </div>
+        <button
+          type="button"
+          className="insight-action-btn"
+          onClick={handleDownloadRunSheetIcs}
+          title="Download Event-Day schedule as RFC 5545 .ics file"
+        >
+          📅 Download Day-of .ics
+        </button>
+      </div>
+      <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 14px" }}>
+        Chronological sequence of rituals, vendor arrivals, and banquet rounds. Click any step to mark completed.
+      </p>
+      <div className="runsheet-timeline">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="runsheet-item"
+            style={{
+              opacity: item.status === "Completed" ? 0.6 : 1,
+              cursor: "pointer",
+            }}
+            onClick={() => toggleStatus(item.id)}
+          >
+            <div className="runsheet-time">{item.time}</div>
+            <div style={{ flex: 1 }}>
+              <strong style={{ display: "block", color: "var(--ink)" }}>
+                {item.title}
+              </strong>
+              <div className="runsheet-owner">
+                👤 {item.owner} · 📍 {item.location}
+              </div>
+              {item.notes && (
+                <small style={{ color: "var(--muted)", display: "block", marginTop: 2 }}>
+                  {item.notes}
+                </small>
+              )}
+            </div>
+            <span
+              className={`task-status ${
+                item.status === "Completed" ? "status-3" : "status-0"
+              }`}
+            >
+              {item.status}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ProactiveInsightsBanner({
+  insights,
+  onNavigate,
+}: {
+  insights: ProactiveInsight[]
+  onNavigate: (destination: string) => void
+}) {
+  if (insights.length === 0) return null
+
+  const activeInsights = insights.filter((i) => !i.resolved).slice(0, 3)
+  if (activeInsights.length === 0) return null
+
+  return (
+    <div className="insights-strip" aria-label="Proactive celebration alerts">
+      {activeInsights.map((insight) => (
+        <aside
+          key={insight.id}
+          className={`insight-card severity-${insight.severity}`}
+          role="alert"
+        >
+          <div className="insight-content">
+            <span className="insight-title">
+              {insight.severity === "critical" && "🚨 "}
+              {insight.severity === "warning" && "⚠ "}
+              {insight.severity === "info" && "ℹ "}
+              {insight.severity === "success" && "✓ "}
+              {insight.title}
+            </span>
+            <span className="insight-desc">{insight.explanation}</span>
+          </div>
+          {insight.actionDestination && (
+            <button
+              type="button"
+              className="insight-action-btn"
+              onClick={() => onNavigate(insight.actionDestination!)}
+            >
+              {insight.recommendedAction} ↗
+            </button>
+          )}
+        </aside>
+      ))}
+    </div>
+  )
+}
+
+function CulturalIdeasBox({
+  occasion,
+  budget,
+  guests,
+}: {
+  occasion: string
+  budget: number
+  guests: number
+}) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [ideas, setIdeas] = useState<EventIdea[]>(DEFAULT_CULTURAL_IDEAS)
+  const [savedIds, setSavedIds] = useState<string[]>([])
+
+  const handleFetchIdeas = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/event-ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ occasion, budget, guests }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data.ideas) && data.ideas.length > 0) {
+          setIdeas(data.ideas)
+        }
+      }
+    } catch {
+      // Fallback catalog is already default
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleSave = (id: string) => {
+    setSavedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    )
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: 14,
+        background: "var(--card)",
+        border: "1px solid var(--line)",
+        padding: 12,
+        borderRadius: 4,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <strong style={{ fontSize: 11, color: "var(--ink)" }}>
+          ✦ Cultural Ideas & Traditions (Gemini 3.8 Flash)
+        </strong>
+        <button
+          type="button"
+          className="insight-action-btn"
+          onClick={() => {
+            if (!open) handleFetchIdeas()
+            setOpen(!open)
+          }}
+        >
+          {open ? "Hide" : "Explore Ideas"}
+        </button>
+      </div>
+
+      {open && (
+        <div style={{ marginTop: 10 }}>
+          {loading ? (
+            <div style={{ fontSize: 11, color: "var(--muted)" }}>
+              ✦ Consulting Gemini for Kerala cultural concepts...
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {ideas.map((idea) => {
+                const isSaved = savedIds.includes(idea.id)
+                return (
+                  <div
+                    key={idea.id}
+                    style={{
+                      background: "var(--paper2)",
+                      padding: 8,
+                      borderRadius: 3,
+                      fontSize: 11,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <strong style={{ color: "var(--ink)" }}>{idea.title}</strong>
+                      <button
+                        type="button"
+                        className="insight-action-btn"
+                        style={{
+                          padding: "2px 6px",
+                          fontSize: 9,
+                          background: isSaved ? "var(--forest)" : "none",
+                          color: isSaved ? "#fff" : "var(--ink)",
+                        }}
+                        onClick={() => toggleSave(idea.id)}
+                      >
+                        {isSaved ? "✓ Saved" : "+ Save Idea"}
+                      </button>
+                    </div>
+                    <p
+                      style={{
+                        margin: "4px 0",
+                        color: "var(--ink)",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {idea.description}
+                    </p>
+                    {idea.estimatedCostRange && (
+                      <small style={{ color: "var(--muted)", fontStyle: "italic" }}>
+                        Estimated Impact: {idea.estimatedCostRange}
+                      </small>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AskAdvisorBox({
+  currentPlan,
+}: {
+  currentPlan: Plan
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [reply, setReply] = useState<string | null>(null)
+
+  const handleAsk = async () => {
+    if (!query.trim()) return
+    setLoading(true)
+    try {
+      const res = await fetch("/api/planning-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: query,
+          currentPlan: {
+            identity: {
+              occasion: "Wedding",
+              budget: currentPlan.budget,
+              guests: currentPlan.guests,
+              months: currentPlan.months,
+            },
+            financials: {
+              totalBudget: currentPlan.budget,
+              isDeficit: sumPlan(currentPlan) > currentPlan.budget,
+            },
+          },
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setReply(data.reply)
+      }
+    } catch {
+      setReply(
+        "Could not connect to planning advisor. Using deterministic ground truth.",
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: 12,
+        background: "var(--card)",
+        border: "1px solid var(--line)",
+        padding: 12,
+        borderRadius: 4,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <strong style={{ fontSize: 11, color: "var(--ink)" }}>
+          ✦ Ask KOOTTU Advisor (Grounded Q&A)
+        </strong>
+        <button
+          type="button"
+          className="insight-action-btn"
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "Hide" : "Ask Question"}
+        </button>
+      </div>
+
+      {open && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input
+              type="text"
+              placeholder="e.g. What is typical advance for Kochi caterers?"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  handleAsk()
+                }
+              }}
+              style={{
+                flex: 1,
+                padding: "6px 8px",
+                fontSize: 11,
+                border: "1px solid var(--line)",
+                borderRadius: 3,
+              }}
+            />
+            <button
+              type="button"
+              className="button primary green"
+              style={{ padding: "6px 12px", fontSize: 11 }}
+              disabled={loading || !query.trim()}
+              onClick={handleAsk}
+            >
+              {loading ? "Asking..." : "Ask"}
+            </button>
+          </div>
+          {reply && (
+            <div
+              style={{
+                marginTop: 8,
+                background: "var(--paper2)",
+                padding: 10,
+                borderRadius: 3,
+                fontSize: 11,
+                lineHeight: 1.5,
+                color: "var(--ink)",
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {reply}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -1229,6 +1961,80 @@ function AdaptDrawer({
     if (balance >= 0) return []
     return generateTradeOffScenarios(proposal, activeLockedKeys)
   }, [proposal, balance, activeLockedKeys])
+
+  const decisionImpact = useMemo(() => {
+    if (!changed) return null
+    const dummyPlan: UnifiedEventPlan = {
+      id: "drawer-plan",
+      version: 3,
+      createdAt: "",
+      lastUpdated: "",
+      identity: {
+        title: "",
+        occasion: setup.occasion,
+        date: setup.date,
+        months: current.months,
+        location: setup.location,
+        guests: current.guests,
+        budget: current.budget,
+        priorities: setup.priorities,
+        requirements: setup.requirements,
+      },
+      financials: {
+        totalBudget: current.budget,
+        totalAllocated: sumPlan(current),
+        totalActualSpent: 0,
+        contingencyReserve: Math.round(current.budget * 0.05),
+        unallocatedAmount: Math.max(0, current.budget - sumPlan(current)),
+        netBalance: current.budget - sumPlan(current),
+        isDeficit: current.budget - sumPlan(current) < 0,
+        deficitAmount: Math.max(0, sumPlan(current) - current.budget),
+        foodPerPerson: 1500,
+      },
+      contingency: {
+        percent: 5,
+        reserveAmount: Math.round(current.budget * 0.05),
+        isManual: false,
+      },
+      categories: current.categories.map((c) => ({ ...c })),
+      lockedKeys,
+      tradeOffScenarios: [],
+      tasks: [],
+      timelineFeasibility: {
+        isFeasible: true,
+        totalDurationDays: 69,
+        availableDays: 120,
+        slackDays: 51,
+        criticalPathTaskIds: [],
+        cycleDetected: false,
+        conflicts: [],
+        summary: "",
+      },
+      vendors: [],
+      acceptedQuotes: {},
+      runSheet: [],
+      ideas: [],
+      readiness: {
+        overallScore: 78,
+        budgetScore: 20,
+        timelineScore: 25,
+        vendorScore: 15,
+        taskScore: 18,
+        riskDeductions: 0,
+        reasons: [],
+        summary: "",
+      },
+      insights: [],
+      history: [],
+      planningStatus: "adapting",
+    }
+    return simulateDecisionImpact(dummyPlan, {
+      budgetDelta: budget - current.budget,
+      guestDelta: guests - current.guests,
+      monthsDelta: months - current.months,
+      lockedKeys: activeLockedKeys,
+    })
+  }, [current, budget, guests, months, activeLockedKeys, setup, changed, lockedKeys])
 
   const handleApplyIntent = async () => {
     if (!intentInput.trim()) return
@@ -1549,6 +2355,67 @@ function AdaptDrawer({
               )}
               <small>{formatINR(proposedSpend)} proposed allocation</small>
             </div>
+
+            {decisionImpact && (
+              <div
+                style={{
+                  background: "var(--paper2)",
+                  border: "1px solid var(--line)",
+                  padding: 12,
+                  borderRadius: 4,
+                  margin: "12px 0",
+                  fontSize: 11,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 4,
+                  }}
+                >
+                  <strong style={{ color: "var(--ink)" }}>
+                    ⚡ Decision Impact Preview
+                  </strong>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      color:
+                        decisionImpact.deltas.readinessScoreDelta >= 0
+                          ? "var(--forest)"
+                          : "var(--coral)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Readiness:{" "}
+                    {decisionImpact.deltas.readinessScoreDelta >= 0
+                      ? `+${decisionImpact.deltas.readinessScoreDelta}`
+                      : decisionImpact.deltas.readinessScoreDelta}{" "}
+                    pts
+                  </span>
+                </div>
+                <p
+                  style={{
+                    margin: "2px 0 6px",
+                    color: "var(--ink)",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {decisionImpact.impactExplanation}
+                </p>
+                <small
+                  style={{
+                    color: decisionImpact.after.isDeficit
+                      ? "var(--coral)"
+                      : "var(--forest)",
+                    fontWeight: 600,
+                  }}
+                >
+                  {decisionImpact.recommendation}
+                </small>
+              </div>
+            )}
             <div className="change-list">
               {proposal.categories.map((category, index) => {
                 const difference =
@@ -1743,6 +2610,13 @@ function AdaptDrawer({
                 </>
               )}
             </div>
+
+            <CulturalIdeasBox
+              occasion={setup.occasion}
+              budget={budget}
+              guests={guests}
+            />
+            <AskAdvisorBox currentPlan={proposal} />
           </div>
         )}
         <footer className="drawer-actions">
@@ -1769,9 +2643,15 @@ function Workspace({
   lockedKeys = [],
   vendorQuotes = [],
   customTaskStatuses = {},
+  taskAssignees = {},
+  acceptedQuotes = {},
+  contingencyPercent = 5,
   onToggleLock,
   onAddQuote,
+  onAcceptQuote,
   onToggleStatus,
+  onAssignTask,
+  onUpdateContingency,
   onResetDemo,
   onAdapt,
   onAccept,
@@ -1783,9 +2663,15 @@ function Workspace({
   lockedKeys?: string[]
   vendorQuotes?: VendorQuote[]
   customTaskStatuses?: Record<string, TaskStatus>
+  taskAssignees?: Record<string, string>
+  acceptedQuotes?: Record<string, string>
+  contingencyPercent?: number
   onToggleLock?: (key: string) => void
   onAddQuote?: (quote: VendorQuote) => void
+  onAcceptQuote?: (quote: VendorQuote) => void
   onToggleStatus?: (taskId: string) => void
+  onAssignTask?: (taskId: string, assignee: string) => void
+  onUpdateContingency?: (pct: number) => void
   onResetDemo?: () => void
   onAdapt: () => void
   onAccept: (plan: Plan) => void
@@ -1803,6 +2689,25 @@ function Workspace({
     setPlanJustAccepted(true)
     window.setTimeout(() => setPlanJustAccepted(false), 1400)
   }
+
+  const template = useMemo(() => findTemplateByOccasion(setup.occasion), [setup.occasion])
+  const runSheet = useMemo(() => template.defaultRunSheet, [template])
+
+  const unifiedPlan = useMemo(() => {
+    return recalculateUnifiedPlan(
+      createInitialUnifiedPlan(setup, template.id),
+      {
+        newBudget: plan.budget,
+        newGuests: plan.guests,
+        newMonths: plan.months,
+        newLockedKeys: lockedKeys,
+        newContingencyPercent: contingencyPercent,
+      },
+    )
+  }, [setup, template, plan, lockedKeys, contingencyPercent])
+
+  const readiness = unifiedPlan.readiness
+  const insights = unifiedPlan.insights
 
   return (
     <div className="workspace">
@@ -1829,14 +2734,29 @@ function Workspace({
               </button>
             )}
           </div>
+          <div className="readiness-pill" title={readiness.summary}>
+            <span>
+              Readiness: <strong className="readiness-score">{readiness.overallScore}%</strong>
+            </span>
+          </div>
+          <button
+            type="button"
+            className="reset-demo-btn"
+            style={{ marginLeft: 2 }}
+            onClick={() => window.print()}
+            title="Print Celebration Brief for family elders"
+          >
+            🖨 Print Brief
+          </button>
         </div>
         <nav aria-label="Workspace navigation">
           {[
             ["Overview", "#overview"],
             ["Budget", "#budget"],
             ["Quotes", "#quotes"],
-            ["Place", "#map"],
             ["Timeline", "#timeline"],
+            ["Run Sheet", "#runsheet"],
+            ["Place", "#map"],
           ].map(([label, id]) => (
             <button key={id} onClick={() => scroll(id)}>
               {label}
@@ -1911,10 +2831,21 @@ function Workspace({
             </div>
           </div>
         </section>
+
+        <ProactiveInsightsBanner
+          insights={insights}
+          onNavigate={(dest) => {
+            if (dest === "#adapt") setDrawerOpen(true)
+            else scroll(dest)
+          }}
+        />
+
         <div className="reveal">
           <BudgetPlanner
             plan={plan}
             lockedKeys={lockedKeys}
+            contingencyPercent={contingencyPercent}
+            onUpdateContingency={onUpdateContingency}
             onToggleLock={onToggleLock}
           />
         </div>
@@ -1922,7 +2853,9 @@ function Workspace({
           <VendorQuotesSection
             plan={plan}
             quotes={vendorQuotes}
+            acceptedQuotes={acceptedQuotes}
             onAddQuote={onAddQuote || (() => undefined)}
+            onAcceptQuote={onAcceptQuote}
           />
         </div>
         <div className="workspace-pair reveal">
@@ -1952,7 +2885,16 @@ function Workspace({
           <Timeline
             months={plan.months}
             customStatuses={customTaskStatuses}
+            taskAssignees={taskAssignees}
             onToggleStatus={onToggleStatus}
+            onAssignTask={onAssignTask}
+          />
+        </div>
+        <div className="reveal">
+          <EventDayRunSheet
+            runSheet={runSheet}
+            eventDate={setup.date}
+            occasion={setup.occasion}
           />
         </div>
         <section className="workspace-cta">
@@ -2017,11 +2959,16 @@ export default function App() {
     useState<Record<string, TaskStatus>>(
       () => initialLoaded?.customTaskStatuses || {},
     )
+  const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>(
+    () => initialLoaded?.taskAssignees || {},
+  )
+  const [acceptedQuotes, setAcceptedQuotes] = useState<Record<string, string>>({})
+  const [contingencyPercent, setContingencyPercent] = useState<number>(5)
 
   // Auto-save to localStorage with versioning
   useEffect(() => {
     saveStoredAppState({
-      version: 2,
+      version: 3,
       lastUpdated: new Date().toISOString(),
       setup,
       plan,
@@ -2029,9 +2976,10 @@ export default function App() {
       lockedKeys,
       vendorQuotes,
       customTaskStatuses,
+      taskAssignees,
       history: [],
     })
-  }, [setup, plan, accepted, lockedKeys, vendorQuotes, customTaskStatuses])
+  }, [setup, plan, accepted, lockedKeys, vendorQuotes, customTaskStatuses, taskAssignees])
 
   const handleToggleLock = (key: string) => {
     setLockedKeys((prev) =>
@@ -2041,6 +2989,20 @@ export default function App() {
 
   const handleAddQuote = (quote: VendorQuote) => {
     setVendorQuotes((prev) => [quote, ...prev.filter((q) => q.id !== quote.id)])
+  }
+
+  const handleAcceptQuote = (quote: VendorQuote) => {
+    setAcceptedQuotes((prev) => ({
+      ...prev,
+      [quote.category]: quote.id,
+    }))
+  }
+
+  const handleAssignTask = (taskId: string, assignee: string) => {
+    setTaskAssignees((prev) => ({
+      ...prev,
+      [taskId]: assignee,
+    }))
   }
 
   const handleToggleTaskStatus = (taskId: string) => {
@@ -2075,6 +3037,8 @@ export default function App() {
     setAccepted(false)
     setLockedKeys(["food"])
     setCustomTaskStatuses({})
+    setAcceptedQuotes({})
+    setContingencyPercent(5)
     setStage("workspace")
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -2104,9 +3068,15 @@ export default function App() {
       lockedKeys={lockedKeys}
       vendorQuotes={vendorQuotes}
       customTaskStatuses={customTaskStatuses}
+      taskAssignees={taskAssignees}
+      acceptedQuotes={acceptedQuotes}
+      contingencyPercent={contingencyPercent}
       onToggleLock={handleToggleLock}
       onAddQuote={handleAddQuote}
+      onAcceptQuote={handleAcceptQuote}
       onToggleStatus={handleToggleTaskStatus}
+      onAssignTask={handleAssignTask}
+      onUpdateContingency={setContingencyPercent}
       onResetDemo={handleResetDemo}
       onAdapt={() => undefined}
       onHome={() => setStage("landing")}

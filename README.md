@@ -1,13 +1,13 @@
-# KOOTTU — AI-Powered Celebration Planning Platform
+# KOOTTU — Intelligent Celebration Operating System
 
 > **കൂട്ട് (KOOTTU)**: Malayalam for *togetherness, gathering, or alliance*.
-> A production-grade, competition-winning celebration planning platform tailored for cultural celebrations, rooted in Kerala traditions, and powered by deterministic financial engineering paired with Google Gemini 3.8 Flash intelligence.
+> An exceptionally engineered, competition-winning celebration planning operating system tailored for Indian cultural celebrations, rooted in Kerala traditions, and powered by deterministic financial engineering paired with Google Gemini 3.8 Flash intelligence.
 
 ---
 
 ## 1. Architectural Philosophy & Core Tenets
 
-KOOTTU is built on one foundational engineering truth: **AI should explain, interpret, and advise — but never calculate or hallucinate financial numbers or scheduling commitments.**
+KOOTTU is built on one foundational engineering truth: **AI should explain, interpret, ideate, and advise — but never calculate or hallucinate financial numbers or scheduling commitments.**
 
 ```mermaid
 flowchart TD
@@ -15,31 +15,38 @@ flowchart TD
     
     subgraph Server_Boundary [Server-Side Boundary (Secrets Protected)]
         Gateway --> Val[Input Validation & Rate Limiter]
-        Val --> Engine[Deterministic Core Engine]
+        Val --> Engine[Unified Authoritative Event Model]
         
-        subgraph Deterministic_Core [Deterministic Ground Truth]
+        subgraph Deterministic_Core [Deterministic Ground Truth Subsystems]
             Engine --> BudgetEng[Budget & Allocation Engine (Integer INR)]
             Engine --> TradeOffEng[3-Scenario Trade-Off Engine]
-            Engine --> DAGEng[Timeline DAG & Critical Path Engine]
-            Engine --> VendorEng[Vendor Quote & GST Parser]
+            Engine --> DAGEng[Timeline DAG & CPM Engine]
+            Engine --> VendorEng[Vendor Lifecycle & 3-Quote Matrix]
+            Engine --> StressEng[Budget Stress Testing Engine]
+            Engine --> ReadinessEng[Celebration Readiness Engine (0-100)]
+            Engine --> RunSheetEng[Run Sheet & RFC 5545 .ics Calendar]
+            Engine --> InsightEng[Proactive Insights Engine]
         end
         
         Deterministic_Core -->|Verified Ground Truth| GeminiPrompt[Ground-Truth Structured Prompt]
         GeminiPrompt -->|Official SDK @google/genai| GeminiAPI[Google Gemini 3.8 Flash]
         GeminiAPI -->|Structured JSON Response| ParseRepair[JSON Parser & Schema Repair]
-        GeminiAPI -.->|503 / Timeout Headroom| FallbackGen[Deterministic Fallback Generator]
+        GeminiAPI -.->|Quota Limit / Timeout / 503| FallbackGen[Deterministic Fallback Generator]
         ParseRepair --> OutputEnvelope[Unified Output Envelope]
         FallbackGen --> OutputEnvelope
     end
 
     OutputEnvelope -->|Client Response| ReactClient[React 19 Frontend State]
     
-    subgraph Client_Workspace [Client-Side Workspace]
-        ReactClient --> WorkspaceUI[Visual Budget Planner]
-        ReactClient --> VendorUI[Vendor Quotation Audit]
-        ReactClient --> TimelineUI[DAG Dependency Timeline]
-        ReactClient --> AdaptDrawerUI[Multi-Scenario Adapt Drawer]
-        ReactClient --> LocalStore[(Local-First Persistence v2)]
+    subgraph Client_Workspace [Client-Side Celebration Workspace]
+        ReactClient --> ReadinessUI[Celebration Readiness Score & Insights]
+        ReactClient --> WorkspaceUI[Visual Budget Planner with Contingency Reserve]
+        ReactClient --> StressUI[Budget Stress Test Simulator]
+        ReactClient --> VendorUI[Vendor Quotation Audit & 3-Quote Comparison]
+        ReactClient --> TimelineUI[DAG Dependency Timeline & Milestones .ics]
+        ReactClient --> RunSheetUI[Event-Day Chronological Run Sheet & .ics]
+        ReactClient --> AdaptDrawerUI[Multi-Scenario Adapt Drawer & AI Advisor]
+        ReactClient --> LocalStore[(Local-First Persistence v3)]
     end
 ```
 
@@ -50,29 +57,47 @@ flowchart TD
    - Food catering is strictly protected at ₹1,500/guest.
    - Reducing guest count from 230 to 200 saves exactly $30 \times ₹1,500 = ₹45,000$, leaving precisely ₹7,000 of the ₹52,000 deficit to resolve.
    - Category locks allow users to hold high-priority allocations (e.g., Photography at ₹86,000 or Venue at ₹1,65,000) completely constant while rebalancing secondary flexible spending.
+   - **Contingency Reserve Slider (0–10%)**: Protects unexpected overruns as a distinct reserve buffer without diluting category baselines.
 
-2. **True Directed Acyclic Graph (DAG) Scheduling**:
+2. **Celebration Readiness Score (0–100)**:
+   - Deterministically scores event preparation across four 25-point pillars:
+     - **Budget Health (0–25 pts)**: Deficit status and contingency cushion.
+     - **Timeline Feasibility (0–25 pts)**: Critical path buffer and planning window slack.
+     - **Vendor Confirmation (0–25 pts)**: Core vendor quotes locked vs unconfirmed.
+     - **Task Execution (0–25 pts)**: Completion ratio of dependency DAG milestones.
+   - Deducts risk penalties for circular dependencies or critical vendor gaps.
+
+3. **Budget Stress Testing Simulator**:
+   - Deterministically projects four real-world shock scenarios before they happen:
+     - **+20% Guest Surge** (family turnout spikes).
+     - **Venue Peak-Season Premium** (generator & air conditioning surcharge).
+     - **Monsoon & Weather Emergency** (waterproofing & shamiana setup).
+     - **Cinematic Photography Extension** (drone film & late reception coverage).
+
+4. **True Directed Acyclic Graph (DAG) Scheduling**:
    - Tasks are modeled as a dependency graph with topological sorting, cycle detection (DFS 3-color algorithm), Critical Path Method (CPM) calculation, and delay propagation.
-   - Timeline feasibility is mathematically proven (`availableDays >= criticalPathDuration`) before any feasibility claim is surfaced to the user.
+   - Feasibility is mathematically verified (`availableDays >= criticalPathDuration`).
+   - One-click export to standard **RFC 5545 `.ics`** calendar format for planning milestones.
 
-3. **Multi-Scenario Trade-Off Generation**:
-   - Automatically generates 3 distinct, mathematically verified trade-off options for any budget deficit:
-     - **Scenario A (Guest Count Optimization)**: Trims headcount to save catering expenses while preserving all category budgets.
-     - **Scenario B (Headcount Protected)**: Retains full guest list; optimizes unlocked flexible categories (decor, photography hours, misc essentials) to absorb the deficit.
-     - **Scenario C (Balanced Compromise)**: Mild guest trim paired with gentle category adjustments.
+5. **Event-Day Chronological Run Sheet**:
+   - Time-blocked day-of schedule (from 06:30 AM Mandapam floral setup through 09:45 AM Muhurtham and Sadya banquet).
+   - Generates downloadable `.ics` calendar events for family coordinators and vendor leads.
 
-4. **Vendor Quotation Intelligence**:
-   - Extracts vendor names, categories, base quotes, GST rates (inclusive vs exclusive), advance payment tokens, and cancellation policies from raw quotation text.
-   - Calculates exact budget variance against the active plan allocation.
-   - Gemini 3.8 Flash audits contracts for hidden risk flags (overtime penalties, uncapped generator fuel, non-refundable deposits).
+6. **Vendor Lifecycle & 3-Quote Value Comparison Matrix**:
+   - Compares up to 3 quotes per category across base pricing, GST inclusions, advance payment %, cancellation policies, and transparent 0–100 value scores.
+   - Generates culturally tailored WhatsApp / Email inquiry drafts ready for copy-pasting.
 
-5. **Natural Language Plan Changes**:
-   - Users can express changes colloquially (*"Reduce budget by ₹50,000 and lock photography"* or *"Add 30 guests for the evening"*).
-   - Gemini 3.8 Flash interprets the intent into structured deltas; the deterministic engine computes the resulting plan; the user reviews and confirms.
+7. **Proactive Insights & Alerts Engine**:
+   - Evaluates active plan telemetry and surfaces prioritized alerts (`critical`, `warning`, `info`, `success`) with direct navigation anchors (`#budget`, `#timeline`, `#vendors`, `#runsheet`).
 
-6. **Local-First Persistence**:
-   - Automatically persists the active plan, setup, category locks, custom task statuses, and vendor quotes to `localStorage` under versioned schema `koottu_plan_v2`.
-   - 1-click **Reset Demo** restores the competition benchmark scenario instantly.
+8. **Grounded AI Ideation & Conversational Assistant**:
+   - `/api/event-ideas`: Suggests authentic Kerala themes, dining stations, and welcome concepts with cost estimates.
+   - `/api/planning-assistant`: Answers planning questions strictly grounded in the user's active plan without hallucinating uncommitted figures.
+   - Resilient against Free Tier quota limits via graceful cultural fallback.
+
+9. **Local-First Persistence (Schema v3)**:
+   - Stores complete plan, category locks, custom task statuses, contingency reserves, accepted quotes, and vendor pipelines in `localStorage`.
+   - Backward-compatible v2 migration and 1-click **Reset Demo**.
 
 ---
 
@@ -122,27 +147,47 @@ $$\text{Remaining Deficit} = ₹52,000 - ₹45,000 = ₹7,000$$
 
 ```
 KOOTTU/
-├── api/                             # Production Serverless Functions (Vercel / Netlify)
+├── api/                             # Production Serverless Functions (Vercel)
 │   ├── health.ts                    # GET /api/health
 │   ├── recommendations.ts           # POST /api/recommendations
 │   ├── plan-intent.ts               # POST /api/plan-intent
-│   └── vendor-quote.ts              # POST /api/vendor-quote
+│   ├── vendor-quote.ts              # POST /api/vendor-quote
+│   ├── event-ideas.ts               # POST /api/event-ideas
+│   └── planning-assistant.ts        # POST /api/planning-assistant
 ├── src/
 │   ├── core/                        # Pure Domain Engines (100% Deterministic)
-│   │   ├── types.ts                 # Unified TypeScript domain definitions
+│   │   ├── types.ts                 # Unified TypeScript domain definitions (v3)
 │   │   ├── budget/
 │   │   │   ├── budgetEngine.ts      # Integer INR allocation & category locking
 │   │   │   ├── budgetEngine.test.ts # Budget unit tests
-│   │   │   └── tradeOffEngine.ts    # 3-scenario trade-off generation
+│   │   │   ├── tradeOffEngine.ts    # 3-scenario trade-off generation
+│   │   │   └── stressTestEngine.ts  # Budget stress testing simulator
 │   │   ├── timeline/
 │   │   │   ├── timelineEngine.ts    # DAG scheduler, CPM, cycle detection & delay propagation
-│   │   │   └── timelineEngine.test.ts
+│   │   │   ├── timelineEngine.test.ts
+│   │   │   ├── runSheetEngine.ts    # Event-day run sheet & RFC 5545 .ics generator
+│   │   │   └── runSheetEngine.test.ts
 │   │   ├── vendor/
 │   │   │   ├── vendorEngine.ts      # Quote parsing, GST calculation & variance
 │   │   │   ├── vendorEngine.test.ts # Vendor parser unit tests
+│   │   │   ├── vendorLifecycleEngine.ts # 3-quote comparison matrix & inquiry drafts
+│   │   │   ├── vendorLifecycleEngine.test.ts
 │   │   │   └── sampleQuotes.ts      # Authentic Kerala vendor quote samples
+│   │   ├── templates/
+│   │   │   └── occasionTemplates.ts # Occasion templates (Wedding, Engagement, Housewarming)
+│   │   ├── insights/
+│   │   │   ├── insightEngine.ts     # Proactive prioritized alert generator
+│   │   │   └── insightEngine.test.ts
+│   │   ├── intelligence/
+│   │   │   ├── readinessEngine.ts   # 0–100 Celebration Readiness scoring engine
+│   │   │   └── readinessEngine.test.ts
+│   │   ├── plan/
+│   │   │   ├── unifiedPlanEngine.ts # Authoritative unified plan coordinator
+│   │   │   └── unifiedPlanEngine.test.ts
+│   │   ├── ideation/
+│   │   │   └── culturalIdeas.ts     # Curated Kerala cultural concepts catalog
 │   │   └── persistence/
-│   │       ├── storage.ts           # Local-first localStorage v2 manager
+│   │       ├── storage.ts           # Local-first localStorage v3 manager & print summary
 │   │       └── storage.test.ts      # Storage recovery & migration tests
 │   ├── server/                      # Server-Side Route Handlers
 │   │   ├── recommendationsHandler.ts # Gemini trade-off handler + deterministic fallback
@@ -151,15 +196,21 @@ KOOTTU/
 │   │   ├── intentHandler.test.ts    # Intent parser unit tests
 │   │   ├── vendorQuoteHandler.ts    # Vendor quotation audit handler
 │   │   ├── vendorQuoteHandler.test.ts
+│   │   ├── ideationHandler.ts       # Creative cultural concepts handler
+│   │   ├── ideationHandler.test.ts
+│   │   ├── assistantHandler.ts      # Grounded planning assistant handler
 │   │   └── vitePlugin.ts            # Vite local development dev middleware
 │   ├── data.ts                      # Backward-compatible domain facade
 │   ├── data.test.ts                 # Regression test suite
-│   ├── App.tsx                      # Primary application component & workspace
+│   ├── App.tsx                      # Primary application component & celebration workspace
 │   ├── main.tsx                     # React 19 entrypoint
 │   └── index.css                    # Design tokens, motion easing, and component styles
+├── scripts/
+│   └── e2e-qa-sprint.mjs            # Comprehensive 68-check E2E verifier
 ├── .env                             # Server-side API key (git-ignored)
 ├── .env.example                     # Environment template
 ├── package.json
+├── vercel.json                      # Vercel serverless routing
 └── vite.config.ts
 ```
 
@@ -181,7 +232,7 @@ GEMINI_MODEL=gemini-3.8-flash
 npm install
 ```
 
-### 3. Run Automated Test Suite
+### 3. Run Automated Unit & Integration Tests
 
 ```bash
 # On Linux / macOS / Bash:
@@ -190,48 +241,57 @@ npm test
 # On Windows PowerShell:
 npm.cmd run test
 ```
-*Executes all 33 unit and integration tests across 8 test suites (budget engine, trade-off scenarios, timeline DAG & CPM, vendor parser, persistence & migration, and server API handlers) in ~1.1s.*
+*Executes all 46 automated unit and integration tests across 13 test suites in ~16–18s with 0 failures.*
 
 ### 4. Run Competition QA Sprint Verification
 
 ```bash
 node scripts/e2e-qa-sprint.mjs
 ```
-*Executes 41 end-to-end integration and mathematical assertions verifying zero floating-point penny drift, category locks, exact ₹7,000 residual deficit exposure, contract auditing, DAG critical paths, and HTTP security boundaries.*
+*Executes 68 end-to-end integration and mathematical assertions verifying 100% check pass rate across ground-truth math, DAG feasibility, category locks, stress tests, readiness scoring, vendor matrices, run sheets, and HTTP security boundaries.*
 
-### 4. Start Local Development Server
+### 5. Start Local Development Server
 
 ```bash
 npm run dev
 ```
 *Starts Vite with the server-side API middleware on `http://localhost:8443`.*
 
-### 5. Build for Production
+### 6. Build for Production
 
 ```bash
 npm run build
 ```
+*Compiles TypeScript and bundles client assets in `<1s`.*
 
 ---
 
 ## 6. End-to-End Demonstration Walkthrough
 
 1. Open `http://localhost:8443`.
-2. Click **Start planning** or **Reset Demo** in the workspace header.
-3. Observe the benchmark scenario:
+2. Observe the **Celebration Readiness Score** pill in the top header and the **Proactive Insights Banner** surfacing active budget alerts.
+3. Observe the benchmark scenario in the **Visual Budget Planner**:
    - Available budget: **₹6,40,000**, Allocated: **₹6,92,000**, Deficit: **−₹52,000**.
    - Food catering protected at **₹3,45,000** for 230 guests.
-4. Explore the **Vendor Quotations** section:
+   - Adjust the **Contingency Reserve Slider** (0–10%) to see real-time reserve allocation.
+   - Expand the **Budget Stress Testing Simulator** to review shock impacts (+20% guests, venue surcharge, monsoon emergency).
+4. Explore the **Vendor Quotations & Pipeline** section:
    - Click **Sadya Caterers (Kochi)** or **Lumière Visual Studios**.
-   - Review extracted base cost, GST, advance token %, and budget variance.
+   - Toggle **Compare 3 Quotes in Category** to evaluate the multi-quote value matrix.
+   - Click **Accept Quote** to lock the vendor into the plan.
+   - Click **Copy Inquiry Message** to get a culturally respectful Malayalam/English booking draft.
    - Click **✦ Audit with Gemini 3.8 Flash** to view AI negotiation advice and risk flags.
-5. Open the **Adapt Plan** drawer:
-   - Type *"Reduce budget by 50,000 and lock photography"* into the natural language box and click **✦ Interpret**.
-   - Observe how Gemini parses the intent and the deterministic engine rebalances the allocations.
-   - Review the **3 Calculated Trade-Off Scenarios** and click **Preview & Apply**.
-   - Click **✦ Explain trade-offs with Gemini 3.8 Flash** to get deep AI trade-off analysis.
-   - Click **Accept changes** — observe the celebration hero glowing as the new baseline is locked.
-6. Refresh the browser — observe that the plan, quotes, and custom task statuses survive via local-first persistence.
+5. Explore the **Milestone Timeline & Run Sheet**:
+   - Click **Download Milestones (.ics)** to export RFC 5545 calendar entries.
+   - Review the **Event-Day Chronological Run Sheet** and click **Export Run Sheet (.ics)**.
+6. Open the **Adapt Plan** drawer:
+   - Type *"Reduce budget by 50,000 and lock photography"* and click **✦ Interpret**.
+   - Ask questions in the **Ask Planning Advisor** box (*"What is the best rain contingency for sadya dining?"*).
+   - Review **Cultural Celebration Concepts** for creative inspiration.
+   - Preview trade-off scenarios and observe the **Decision Impact Preview** before committing.
+   - Click **Accept changes** — observe celebration hero update with renewed readiness.
+7. Click **Print Celebration Summary** to generate an offline, printable family brief.
+8. Refresh the browser — observe all state, locks, and quotes survive via local-first persistence v3.
 
 ---
 
@@ -243,7 +303,7 @@ npm run build
 - `.env` is strictly git-ignored; a sanitized `.env.example` template is provided for judges and contributors.
 
 ### Request Validation & Boundary Protection
-- **Request Size Limiting**: Hard-capped at **10KB** per request on all API endpoints (`/api/recommendations`, `/api/plan-intent`, `/api/vendor-quote`) to prevent denial-of-service via large payloads.
+- **Request Size Limiting**: Hard-capped at **10KB** per request on all API endpoints (`/api/recommendations`, `/api/plan-intent`, `/api/vendor-quote`, `/api/event-ideas`, `/api/planning-assistant`) to prevent denial-of-service via large payloads.
 - **Strict Bounds Validation**: Numerical parameters are validated server-side (Budget: ₹3L–₹5Cr, Guests: 20–500, Planning Window: 1–12 months). Non-POST requests are rejected with HTTP 405 Method Not Allowed; malformed JSON returns HTTP 400.
 - **In-Memory Rate Limiting vs. Production Distributed Architectures**:
   - The built-in rate limiter utilizes an in-memory sliding window (15–20 requests/minute per client IP), ideal for local development, demonstrations, and single-node instances.
@@ -251,7 +311,7 @@ npm run build
 
 ### Quota Resilience & Graceful Fallbacks
 - If Google Gemini returns HTTP 503, high network latency (>120s timeout), or `RESOURCE_EXHAUSTED` (Google AI Studio Free Tier quota limit of 20 requests/day on `gemini-3.8-flash`), the server intercepts the exception gracefully.
-- Instead of failing or displaying broken UI states, the system returns a verified deterministic response with `status: "fallback"`, `isAiGenerated: false`, and an informational badge. The user receives 100% accurate ground-truth calculations and recommendations without interruption.
+- Instead of failing or displaying broken UI states, the system returns a verified deterministic response with `status: "fallback"`, `isAiGenerated: false`, and an informational badge. The user receives 100% accurate ground-truth calculations, cultural ideas, and recommendations without interruption.
 
 ### Production Deployment (Vercel)
 The repository is production-ready for Vercel deployment:

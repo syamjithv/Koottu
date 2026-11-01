@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test src/data.test.ts src/core/budget/budgetEngine.test.ts src/core/timeline/timelineEngine.test.ts src/core/vendor/vendorEngine.test.ts src/core/persistence/storage.test.ts src/server/recommendationsHandler.test.ts src/server/intentHandler.test.ts src/server/vendorQuoteHandler.test.ts",
+    "test": "node --experimental-strip-types --test src/**/*.test.ts",
     "format": "oxfmt"
   },
   "dependencies": {

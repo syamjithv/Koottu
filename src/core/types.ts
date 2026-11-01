@@ -53,6 +53,10 @@ export type ScheduledTask = {
   isCriticalPath?: boolean
   isUrgent?: boolean
   isFeasible?: boolean
+  assignee?: string // Family member or coordinator responsible
+  canCompress?: boolean
+  earliestStartDays?: number
+  latestStartDays?: number
 }
 
 export type TimelineFeasibility = {
@@ -64,6 +68,100 @@ export type TimelineFeasibility = {
   cycleDetected: boolean
   conflicts: string[]
   summary: string
+  compressionFeasible?: boolean
+  compressionSummary?: string
+}
+
+// --- Event-Day Run Sheet ---
+
+export type RunSheetItem = {
+  id: string
+  time: string // e.g. "07:30 AM"
+  title: string
+  category: "prep" | "ceremony" | "feast" | "photo" | "winddown" | "general"
+  owner: string // Responsible family member/coordinator
+  location: string
+  status: "Pending" | "In progress" | "Completed"
+  notes?: string
+}
+
+// --- Creative Event Ideas ---
+
+export type EventIdea = {
+  id: string
+  category: "theme" | "decor" | "food" | "activity" | "cultural"
+  title: string
+  description: string
+  estimatedCostRange?: string
+  saved: boolean
+}
+
+// --- Proactive Event Intelligence Insights ---
+
+export type ProactiveInsightSeverity = "critical" | "warning" | "info" | "success"
+
+export type ProactiveInsight = {
+  id: string
+  severity: ProactiveInsightSeverity
+  category: "budget" | "timeline" | "vendor" | "task" | "cultural"
+  title: string
+  explanation: string
+  evidence?: string
+  recommendedAction: string
+  actionDestination?: string // e.g. "#budget", "#timeline", "#vendors", "#adapt"
+  relatedEntityId?: string
+  timestamp: string
+  resolved: boolean
+}
+
+// --- Celebration Readiness Score ---
+
+export type CelebrationReadiness = {
+  overallScore: number // 0 to 100
+  budgetScore: number // 0 to 25
+  timelineScore: number // 0 to 25
+  vendorScore: number // 0 to 25
+  taskScore: number // 0 to 25
+  riskDeductions: number // Deductions e.g. -10 for unconfirmed critical path
+  reasons: string[]
+  summary: string
+}
+
+// --- Stress Testing Domain ---
+
+export type StressTestScenario = {
+  id: string
+  title: string
+  description: string
+  deltaBudget: number
+  deltaGuests: number
+  deltaExpenses: number
+  resultingDeficit: number
+  impactSummary: string
+  affectedCategories: string[]
+}
+
+// --- Vendor Management Domain ---
+
+export type VendorStatus =
+  | "not_started"
+  | "shortlisted"
+  | "contacted"
+  | "quote_received"
+  | "negotiating"
+  | "accepted"
+  | "declined"
+
+export type UnifiedVendor = {
+  id: string
+  name: string
+  category: CategoryKey | string
+  status: VendorStatus
+  contact?: string
+  location?: string
+  notes?: string
+  quotes: VendorQuote[]
+  acceptedQuoteId?: string
 }
 
 // --- Trade-Off Scenarios ---
@@ -161,6 +259,82 @@ export type RecommendationResponse = {
   note?: string
 }
 
+// --- Unified Authoritative Event Planning Model ---
+
+export type UnifiedCategory = Category & {
+  actualSpent?: number
+  contractedQuoteId?: string
+  floor?: number
+  perPersonRate?: number
+}
+
+export type OccasionTemplate = {
+  id: string
+  name: string
+  description: string
+  defaultBudget: number
+  defaultGuests: number
+  defaultMonths: number
+  categoryRatios: Record<string, number>
+  categoryFloors: Record<string, number>
+  foodPerPerson: number
+  culturalNotes: string[]
+  defaultTasks: ScheduledTask[]
+  defaultRunSheet: RunSheetItem[]
+}
+
+export type ContingencyConfig = {
+  percent: number // e.g. 5 for 5%
+  reserveAmount: number // Exact integer INR
+  isManual: boolean
+}
+
+export type UnifiedFinancials = {
+  totalBudget: number
+  totalAllocated: number
+  totalActualSpent: number
+  contingencyReserve: number
+  unallocatedAmount: number
+  netBalance: number // totalBudget - (totalAllocated + contingencyReserve)
+  isDeficit: boolean
+  deficitAmount: number
+  foodPerPerson: number
+}
+
+export type UnifiedEventPlan = {
+  id: string
+  version: number
+  createdAt: string
+  lastUpdated: string
+  identity: {
+    title: string
+    occasion: string
+    occasionTemplateId?: string
+    date: string
+    months: number
+    location: string
+    guests: number
+    budget: number
+    priorities: string[]
+    requirements: string
+  }
+  financials: UnifiedFinancials
+  contingency: ContingencyConfig
+  categories: UnifiedCategory[]
+  lockedKeys: string[]
+  tradeOffScenarios: TradeOffScenario[]
+  tasks: ScheduledTask[]
+  timelineFeasibility: TimelineFeasibility
+  vendors: UnifiedVendor[]
+  acceptedQuotes: Record<string, string> // categoryKey -> quoteId
+  runSheet: RunSheetItem[]
+  ideas: EventIdea[]
+  readiness: CelebrationReadiness
+  insights: ProactiveInsight[]
+  history: PlanRevision[]
+  planningStatus: "draft" | "configured" | "adapting" | "confirmed"
+}
+
 // --- Audit History & Persistence ---
 
 export type PlanRevision = {
@@ -181,4 +355,8 @@ export type StoredAppState = {
   vendorQuotes: VendorQuote[]
   customTaskStatuses: Record<string, TaskStatus>
   history: PlanRevision[]
+  // v3 additions (optional on older persisted schemas)
+  unifiedPlan?: UnifiedEventPlan
+  activeTab?: string
+  taskAssignees?: Record<string, string>
 }

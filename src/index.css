@@ -622,3 +622,213 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* --- Readiness Score Pill --- */
+.readiness-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--paper2);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--ink);
+  cursor: help;
+}
+.readiness-pill .readiness-score {
+  color: var(--forest);
+  font-weight: 700;
+}
+
+/* --- Proactive Insights Bar --- */
+.insights-strip {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.insight-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  border-left: 4px solid var(--line);
+  background: var(--card);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+.insight-card.severity-critical {
+  border-left-color: var(--coral);
+  background: #fff8f6;
+}
+.insight-card.severity-warning {
+  border-left-color: var(--saffron);
+  background: #fffdf5;
+}
+.insight-card.severity-info {
+  border-left-color: var(--sage);
+  background: #f7faf8;
+}
+.insight-card.severity-success {
+  border-left-color: var(--forest);
+  background: #f0f7f3;
+}
+.insight-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.insight-title {
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.insight-desc {
+  color: var(--muted);
+  font-size: 11px;
+}
+.insight-action-btn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .2s;
+}
+.insight-action-btn:hover {
+  background: var(--paper);
+  border-color: var(--ink);
+}
+
+/* --- Contingency Reserve Controls --- */
+.contingency-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--paper2);
+  border: 1px dashed var(--line);
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin-top: 12px;
+  font-size: 11px;
+}
+
+/* --- Stress Test Grid --- */
+.stress-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.stress-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.stress-card h4 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--ink);
+}
+.stress-card p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.stress-card .stress-deficit {
+  font-weight: 700;
+  color: var(--coral);
+}
+
+/* --- 3-Quote Comparison Table --- */
+.quote-compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-top: 12px;
+}
+.quote-compare-table th,
+.quote-compare-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.quote-compare-table th {
+  background: var(--paper2);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+}
+.quote-compare-table tr.is-best {
+  background: #f4faf6;
+}
+
+/* --- Event-Day Run Sheet --- */
+.runsheet-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+.runsheet-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  padding: 10px 14px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.runsheet-time {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 75px;
+}
+.runsheet-owner {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+/* --- Print Stylesheet --- */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .workspace-nav,
+  .hero-ctas,
+  .adapt-nav,
+  .quote-actions-row,
+  .sample-quote-picker,
+  .button,
+  .reset-demo-btn,
+  .drawer-layer {
+    display: none !important;
+  }
+  .workspace-main {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .celebration-hero {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}

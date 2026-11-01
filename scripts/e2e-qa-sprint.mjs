@@ -12,6 +12,16 @@ import {
   importPlanJSON,
   DEFAULT_SETUP,
   originalPlan,
+  createInitialUnifiedPlan,
+  recalculateUnifiedPlan,
+  simulateDecisionImpact,
+  calculateCelebrationReadiness,
+  generateProactiveInsights,
+  runBudgetStressTests,
+  compareCategoryQuotes,
+  generateMilestonesIcs,
+  generateRunSheetIcs,
+  KERALA_WEDDING_TEMPLATE,
 } from "../src/data.ts"
 
 async function runQASprint() {
@@ -132,10 +142,134 @@ async function runQASprint() {
   assertCheck("Delay in guest-est propagates to cater-comp", delayImpact.impactedTaskIds.includes("cater-comp"));
   assertCheck("Delay in guest-est propagates to vendor-confirm", delayImpact.impactedTaskIds.includes("vendor-confirm"));
 
-  // --- 8. LOCAL PERSISTENCE & EXPORT/IMPORT ---
-  console.log("\n--- 8. Local Persistence & State Restoration ---");
+  // --- 8. UNIFIED PLAN & CONTINGENCY RESERVE ENGINE ---
+  console.log("\n--- 8. Unified Plan & Contingency Reserve Engine ---");
+  const uPlan = createInitialUnifiedPlan({
+    budget: 640000,
+    guests: 230,
+    months: 4,
+    occasion: "wedding",
+    priorities: ["food", "venue"]
+  });
+  assertCheck("Unified plan initializes with 5% contingency (₹32,000)", uPlan.contingency.reserveAmount === 32000);
+  assertCheck("Unified plan food allocation matches 230 * 1500 (₹3,45,000)", uPlan.categories.find(c => c.key === "food")?.amount === 345000);
+  assertCheck("Unified plan tracks active deficit deterministically", uPlan.financials.isDeficit === true);
+  assertCheck("Unified plan includes 3 trade-off scenarios", uPlan.tradeOffScenarios.length === 3);
+
+  // Decision impact preview
+  const impact = simulateDecisionImpact(uPlan, { guestDelta: -30 });
+  assertCheck("Simulate impact correctly calculates food impact", impact.impactExplanation.includes("45,000"));
+  assertCheck("Simulate impact shows improved readiness score", impact.after.readinessScore > impact.before.readinessScore);
+
+  // --- 9. CELEBRATION READINESS & PROACTIVE INSIGHTS ---
+  console.log("\n--- 9. Celebration Readiness & Proactive Insights ---");
+  const readiness = uPlan.readiness;
+  assertCheck("Readiness score is a valid 0-100 integer", readiness.overallScore >= 0 && readiness.overallScore <= 100);
+  assertCheck("Readiness breakdown has 4 pillar scores", typeof readiness.budgetScore === "number" && typeof readiness.timelineScore === "number" && typeof readiness.vendorScore === "number" && typeof readiness.taskScore === "number");
+  assertCheck("Readiness has summary rating", typeof readiness.summary === "string" && readiness.summary.length > 0);
+
+  const insights = uPlan.insights;
+  assertCheck("Deterministic insight engine generates alerts", insights.length > 0);
+  assertCheck("Critical budget deficit insight flagged", insights.some(i => i.severity === "critical" && i.category === "budget"));
+
+  // --- 10. BUDGET STRESS TESTING & RUN SHEET ---
+  console.log("\n--- 10. Budget Stress Testing & Run Sheet Generation ---");
+  const stressResults = runBudgetStressTests(uPlan);
+  assertCheck("Stress testing evaluates 4 scenarios", stressResults.length === 4);
+  const guestStress = stressResults.find(s => s.id === "stress-guests-20");
+  assertCheck("Guest surge stress tests +20% guests accurately", guestStress?.deltaExpenses === 69000);
+
+  const runSheet = KERALA_WEDDING_TEMPLATE.defaultRunSheet;
+  assertCheck("Run sheet has timed events", runSheet.length >= 6);
+  assertCheck("Morning Muhurtham scheduled", runSheet.some(item => item.title.includes("Muhurtham")));
+
+  const icsRunSheet = generateRunSheetIcs(runSheet, "2026-12-15");
+  assertCheck("Valid RFC 5545 iCalendar generated for run sheet", icsRunSheet.includes("BEGIN:VCALENDAR") && icsRunSheet.includes("END:VCALENDAR"));
+
+  const icsMilestones = generateMilestonesIcs(uPlan.tasks, "2026-12-15");
+  assertCheck("Valid RFC 5545 iCalendar generated for milestones", icsMilestones.includes("BEGIN:VCALENDAR") && icsMilestones.includes("END:VCALENDAR"));
+
+  // --- 11. VENDOR QUOTE COMPARISON MATRIX ---
+  console.log("\n--- 11. Vendor Quote Comparison Matrix ---");
+  const quotesMatrix = compareCategoryQuotes([
+    {
+      id: "q1",
+      category: "food",
+      vendorName: "Malabar Caterers",
+      totalAmount: 320000,
+      perGuestRate: 1391,
+      advancePaymentPercent: 40,
+      gstIncluded: false,
+      cancellationDays: 14,
+      menuItemsCount: 26,
+      rating: 4.8,
+      status: "quoted",
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: "q2",
+      category: "food",
+      vendorName: "Travancore Royal Feast",
+      totalAmount: 360000,
+      perGuestRate: 1565,
+      advancePaymentPercent: 20,
+      gstIncluded: true,
+      cancellationDays: 30,
+      menuItemsCount: 28,
+      rating: 4.9,
+      status: "quoted",
+      createdAt: new Date().toISOString()
+    }
+  ], 345000);
+  assertCheck("Comparison matrix ranks quotes", quotesMatrix.quotes.length === 2);
+  assertCheck("Identifies best value quote with score", quotesMatrix.quotes[0].valueScore > 0);
+  assertCheck("Provides transparent reasoning", quotesMatrix.transparentReasoning.length > 10);
+
+  // --- 12. NEW AI ENDPOINTS (/api/event-ideas & /api/planning-assistant) ---
+  console.log("\n--- 12. New AI Endpoints (/api/event-ideas & /api/planning-assistant) ---");
+  const ideasRes = await fetch("http://localhost:8443/api/event-ideas", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      occasionType: "wedding_kerala",
+      themePrompt: "Traditional Kerala temple aesthetic with marigold and brass",
+      currentBudget: 640000,
+      guestCount: 230
+    })
+  });
+  const ideasData = await ideasRes.json();
+  assertCheck("/api/event-ideas returns HTTP 200", ideasRes.status === 200);
+  assertCheck("Returns concept ideas array", Array.isArray(ideasData.ideas) && ideasData.ideas.length > 0);
+  assertCheck("Ideas include title and estimated cost range", typeof ideasData.ideas[0]?.title === "string" && typeof ideasData.ideas[0]?.estimatedCostRange === "string");
+
+  const assistantRes = await fetch("http://localhost:8443/api/planning-assistant", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: "What is the best way to handle rain contingency for sadya dining?",
+      currentPlan: {
+        identity: {
+          occasionTitle: "Kerala Wedding",
+          budget: 640000,
+          guests: 230,
+          months: 4,
+        },
+        financials: {
+          totalBudget: 640000,
+          isDeficit: true,
+          deficitAmount: 52000,
+        },
+      }
+    })
+  });
+  const assistantData = await assistantRes.json();
+  assertCheck("/api/planning-assistant returns HTTP 200", assistantRes.status === 200);
+  assertCheck("Returns grounded advice text", typeof assistantData.reply === "string" && assistantData.reply.length > 20);
+
+  // --- 13. LOCAL PERSISTENCE & EXPORT/IMPORT ---
+  console.log("\n--- 13. Local Persistence & State Restoration ---");
   const testState = {
-    version: 2,
+    version: 3,
     lastUpdated: new Date().toISOString(),
     setup: DEFAULT_SETUP,
     plan: originalPlan,
@@ -148,10 +282,10 @@ async function runQASprint() {
   const exported = exportPlanJSON(testState);
   const imported = importPlanJSON(exported);
   assertCheck("State exports to valid JSON", typeof exported === "string" && exported.length > 50);
-  assertCheck("State imports cleanly without data loss", imported?.version === 2 && imported.setup.budget === 800000);
+  assertCheck("State imports cleanly without data loss", imported?.version === 3 && imported.setup.budget === 800000);
 
-  // --- 9. SECURITY & REJECTION AUDIT ---
-  console.log("\n--- 9. Security & Error Boundary Audit ---");
+  // --- 14. SECURITY & REJECTION AUDIT ---
+  console.log("\n--- 14. Security & Error Boundary Audit ---");
   const badBudgetRes = await fetch("http://localhost:8443/api/recommendations", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -167,6 +301,12 @@ async function runQASprint() {
 
   const quoteGetRej = await fetch("http://localhost:8443/api/vendor-quote", { method: "GET" });
   assertCheck("Non-POST vendor-quote rejected with HTTP 405", quoteGetRej.status === 405);
+
+  const ideasGetRej = await fetch("http://localhost:8443/api/event-ideas", { method: "GET" });
+  assertCheck("Non-POST event-ideas rejected with HTTP 405", ideasGetRej.status === 405);
+
+  const assistantGetRej = await fetch("http://localhost:8443/api/planning-assistant", { method: "GET" });
+  assertCheck("Non-POST planning-assistant rejected with HTTP 405", assistantGetRej.status === 405);
 
   console.log("\n====================================================================");
   console.log(`  QA SPRINT RESULTS: ${passedChecks} / ${totalChecks} CHECKS PASSED (100%)`);
