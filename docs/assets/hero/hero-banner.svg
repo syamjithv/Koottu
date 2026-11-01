@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 440" width="100%" height="auto">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#143728"/>
+      <stop offset="50%" stop-color="#1b4332"/>
+      <stop offset="100%" stop-color="#0f291e"/>
+    </linearGradient>
+    
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="50%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#224f3c"/>
+      <stop offset="100%" stop-color="#183d2e"/>
+    </linearGradient>
+
+    <filter id="subtleGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <pattern id="kasavuWeave" width="40" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 0,10 L 20,0 L 40,10 L 20,20 Z" fill="none" stroke="#d97706" stroke-width="0.8" opacity="0.25"/>
+      <circle cx="20" cy="10" r="1.5" fill="#fbbf24" opacity="0.3"/>
+    </pattern>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1200" height="440" rx="16" fill="url(#bgGrad)"/>
+
+  <!-- Kasavu Geometric Border Bands -->
+  <rect x="24" y="24" width="1152" height="392" rx="12" fill="none" stroke="url(#goldGrad)" stroke-width="1.5" opacity="0.6"/>
+  <rect x="34" y="34" width="1132" height="372" rx="8" fill="none" stroke="#d97706" stroke-width="0.75" stroke-dasharray="4,3" opacity="0.4"/>
+  
+  <!-- Subtle Weave Texture on Sides -->
+  <rect x="36" y="36" width="1128" height="60" fill="url(#kasavuWeave)"/>
+  <rect x="36" y="344" width="1128" height="60" fill="url(#kasavuWeave)"/>
+
+  <!-- Left Brass Lamp / Nilavilakku Artistic Glyph -->
+  <g transform="translate(100, 220)" opacity="0.9">
+    <!-- Base Plate -->
+    <path d="M-30,90 C-10,85 10,85 30,90 L24,96 C5,94 -5,94 -24,96 Z" fill="url(#goldGrad)"/>
+    <ellipse cx="0" cy="85" rx="22" ry="5" fill="#f59e0b"/>
+    <!-- Stem Column -->
+    <path d="M-5,85 L-4,30 L-8,25 L-2,10 L-6,0 L6,0 L2,10 L8,25 L4,30 L5,85 Z" fill="url(#goldGrad)"/>
+    <circle cx="0" cy="40" r="5" fill="#fbbf24"/>
+    <!-- Oil Basin -->
+    <ellipse cx="0" cy="0" rx="35" ry="8" fill="url(#goldGrad)"/>
+    <ellipse cx="0" cy="-2" rx="31" ry="6" fill="#b45309"/>
+    <!-- Wick Spikes -->
+    <path d="M-32,-2 L-40,-5 L-30,-3 Z" fill="#fbbf24"/>
+    <path d="M32,-2 L40,-5 L30,-3 Z" fill="#fbbf24"/>
+    <path d="M0,-8 L0,-16 L2,-8 Z" fill="#fbbf24"/>
+    <!-- Central Flame -->
+    <path d="M0,-10 C-8,-25 -10,-40 0,-56 C10,-40 8,-25 0,-10 Z" fill="url(#goldGrad)" filter="url(#subtleGlow)"/>
+    <path d="M0,-14 C-4,-24 -5,-34 0,-44 C5,-34 4,-24 0,-14 Z" fill="#fff7ed"/>
+  </g>
+
+  <!-- Right Traditional Lotus / Pookkalam Mandala Accent -->
+  <g transform="translate(1100, 220)" opacity="0.25">
+    <circle cx="0" cy="0" r="80" fill="none" stroke="#fbbf24" stroke-width="1"/>
+    <circle cx="0" cy="0" r="60" fill="none" stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="6,4"/>
+    <circle cx="0" cy="0" r="40" fill="none" stroke="#fbbf24" stroke-width="0.8"/>
+    <!-- Petals -->
+    <g stroke="#fbbf24" stroke-width="1" fill="none">
+      <path d="M0,0 C20,-30 40,-30 40,0 C40,30 20,30 0,0 Z"/>
+      <path d="M0,0 C-20,-30 -40,-30 -40,0 C-40,30 -20,30 0,0 Z"/>
+      <path d="M0,0 C-30,20 -30,40 0,40 C30,40 30,20 0,0 Z"/>
+      <path d="M0,0 C-30,-20 -30,-40 0,-40 C30,-40 30,-20 0,0 Z"/>
+      <path d="M0,0 C25,-15 35,-35 25,-40 C15,-45 0,-25 0,0 Z"/>
+      <path d="M0,0 C-25,15 -35,35 -25,40 C-15,45 0,25 0,0 Z"/>
+      <path d="M0,0 C-25,-15 -35,-35 -25,-40 C-15,-45 0,-25 0,0 Z"/>
+      <path d="M0,0 C25,15 35,35 25,40 C15,45 0,25 0,0 Z"/>
+    </g>
+    <circle cx="0" cy="0" r="8" fill="#f59e0b"/>
+  </g>
+
+  <!-- Center Editorial Header & Typography -->
+  <g transform="translate(200, 95)">
+    <!-- Cultural Script Badge -->
+    <rect x="0" y="0" width="138" height="28" rx="14" fill="#24553f" stroke="#d97706" stroke-width="0.8"/>
+    <text x="69" y="19" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#fef3c7" text-anchor="middle" letter-spacing="1">
+      കൂട്ട് • KERALA
+    </text>
+
+    <!-- Main Title -->
+    <text x="0" y="80" font-family="'Playfair Display', Georgia, 'Times New Roman', serif" font-size="54" font-weight="700" fill="#ffffff" letter-spacing="-0.5">
+      KOOTTU
+    </text>
+    <text x="250" y="78" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="400" fill="#fbbf24" letter-spacing="3">
+      / INTELLIGENT CELEBRATION OS
+    </text>
+
+    <!-- Tagline -->
+    <text x="0" y="125" font-family="'Playfair Display', Georgia, serif" font-size="24" font-style="italic" fill="#fef3c7" opacity="0.95">
+      “Make room for the moments that matter.”
+    </text>
+
+    <!-- Subtitle Description -->
+    <text x="0" y="165" font-family="system-ui, -apple-system, sans-serif" font-size="15" fill="#cbd5e1" font-weight="400">
+      A celebration begins long before the celebration day. Engineered with deterministic integer INR
+    </text>
+    <text x="0" y="190" font-family="system-ui, -apple-system, sans-serif" font-size="15" fill="#cbd5e1" font-weight="400">
+      financial precision, DAG critical path scheduling, and grounded Google Gemini 3.8 Flash intelligence.
+    </text>
+
+    <!-- Interactive Architecture Badges -->
+    <g transform="translate(0, 225)">
+      <!-- Pill 1: Deterministic Budget -->
+      <g transform="translate(0, 0)">
+        <rect width="186" height="34" rx="6" fill="#183d2e" stroke="#2a6649" stroke-width="1"/>
+        <circle cx="16" cy="17" r="4" fill="#10b981"/>
+        <text x="30" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#ecfdf5">
+          Deterministic INR Core
+        </text>
+      </g>
+
+      <!-- Pill 2: DAG Critical Path -->
+      <g transform="translate(196, 0)">
+        <rect width="182" height="34" rx="6" fill="#183d2e" stroke="#2a6649" stroke-width="1"/>
+        <circle cx="16" cy="17" r="4" fill="#3b82f6"/>
+        <text x="30" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#eff6ff">
+          DAG Critical Path (CPM)
+        </text>
+      </g>
+
+      <!-- Pill 3: Gemini 3.8 Flash -->
+      <g transform="translate(388, 0)">
+        <rect width="176" height="34" rx="6" fill="#183d2e" stroke="#2a6649" stroke-width="1"/>
+        <circle cx="16" cy="17" r="4" fill="#f59e0b"/>
+        <text x="30" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#fffbeb">
+          Gemini 3.8 Flash AI
+        </text>
+      </g>
+
+      <!-- Pill 4: Local-First v3 -->
+      <g transform="translate(574, 0)">
+        <rect width="180" height="34" rx="6" fill="#183d2e" stroke="#2a6649" stroke-width="1"/>
+        <circle cx="16" cy="17" r="4" fill="#a855f7"/>
+        <text x="30" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#faf5ff">
+          Local-First Engine v3
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>
